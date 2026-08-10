@@ -16,6 +16,7 @@
 """
 import os
 import sys
+import time
 import urllib.request
 import urllib.error
 
@@ -24,6 +25,10 @@ DB_PATH = os.path.join("data", "tax_policy.db")
 
 def main():
     url = os.environ.get("TAXDB_DB_URL", "").strip()
+    # 绕过 GitHub Release 下载的 CDN 缓存：对 releases/download 链接追加时间戳 query，
+    # 确保覆盖上传新数据库后，Render 重新部署能拉到最新文件而非旧缓存。
+    if url and "releases/download" in url and "?" not in url:
+        url = url + "?_=" + str(int(time.time()))
     # 本地已存在则跳过（便于本地直接运行 / 避免重复下载）
     if os.path.exists(DB_PATH) and os.path.getsize(DB_PATH) > 1_000_000:
         print(f"[fetch_db] 已存在 {DB_PATH}（{os.path.getsize(DB_PATH)//1024//1024}MB），跳过下载。")

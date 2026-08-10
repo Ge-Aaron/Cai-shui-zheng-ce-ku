@@ -21,3 +21,4 @@ cloudflared.exe
 tunnel.log
 start_tunnel.bat
 start_ssh_tunnel.bat
+.env.local

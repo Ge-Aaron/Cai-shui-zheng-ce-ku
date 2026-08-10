@@ -138,3 +138,23 @@
 
 ## 以后更新代码
 改完代码后，双击 `publish.bat` 重新推送，Render 会自动重新部署（默认开启 Auto-Deploy）。
+
+---
+
+## 一键更新数据和重新部署（改完数据后）
+
+如果你在本地改了政策数据（或想拉取最新政策），想让云端 `taxdb-y44n.onrender.com` 也更新，双击 **`deploy_update.bat`** 即可一步完成：
+
+1. 首次运行会让你填两个凭证（只填一次，自动存到 `.env.local`，**不会上传 GitHub**）：
+   - **GITHUB_TOKEN**：GitHub 网页 → 头像 → Settings → Developer settings → Personal access tokens → Tokens (classic) → 勾 `repo` → 生成，复制 `ghp_xxx`
+   - **RENDER_DEPLOY_HOOK**：Render 控制台 → 你的 taxdb 服务 → Settings → Deploy Hook → Generate Deploy Hook，复制那个 `https://api.render.com/deploy/...` 链接
+2. 选择「重新生成」方式：
+   - `1` 增量更新（推荐：抓取最新政策 + 重建向量）
+   - `2` 全量重建向量（改了分析/向量逻辑时用）
+   - `3` 跳过生成（已手动改好数据库，直接上传）
+3. 脚本自动：覆盖上传新数据库到 Release `v1.0.0` → 触发 Render 重新部署（约 1–2 分钟）。
+4. 完成后打开 `https://taxdb-y44n.onrender.com` 即可看到更新后的数据。
+
+> 数据库走「固定 tag 覆盖」：下载地址 `.../v1.0.0/tax_policy.db` 永远不变，所以**不用改 Render 的环境变量**。
+> 云端每次重新部署都会重新下载最新数据库（`fetch_db.py` 已加时间戳绕过 CDN 缓存，确保拿到新文件）。
+> 若选 `1`（增量更新），本地正在运行的 taxdb 服务也会同步刷新内存索引，本地和云端一起更新。
