@@ -1,0 +1,31 @@
+# Render 部署配置（免费层）
+# 说明：代码进 git 仓库；数据库本体(~156M)不进 git，构建时由 scripts/fetch_db.py
+#       从 TAXDB_DB_URL 下载（绕开 Git LFS / GitHub 100M 单文件限制）。
+# TAXDB_LLM_KEY / TAXDB_DB_URL / TAXDB_DB_TOKEN 在 Render 控制台「Environment」手动填入，
+# 不写进本文件 / 代码仓库（sync: false）。
+services:
+  - type: web
+    name: taxdb
+    runtime: python
+    plan: free
+    region: singapore        # 离国内近，访问更快；也可改 oregon / frankfurt
+    buildCommand: python scripts/fetch_db.py && pip install -r requirements.txt
+    startCommand: python scripts/server.py
+    healthCheckPath: /api/stats
+    envVars:
+      - key: TAXDB_LLM_URL
+        value: https://api.siliconflow.cn/v1
+      - key: TAXDB_LLM_MODEL
+        value: deepseek-ai/DeepSeek-V3
+      - key: TAXDB_EMBED_MODEL
+        value: BAAI/bge-m3
+      - key: TAXDB_NO_BROWSER     # 云端不弹浏览器
+        value: "1"
+      - key: TAXDB_LLM_KEY        # 控制台填入真实 key（sync:false=不从本文件读）
+        sync: false
+      - key: TAXDB_DB_URL         # 数据库下载地址（公开可下载 URL 即可）
+        sync: false
+      - key: TAXDB_DB_TOKEN       # 可选：私有 Release 资产下载用的 Bearer Token
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.12"

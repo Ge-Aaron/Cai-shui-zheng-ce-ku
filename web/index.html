@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>财税政策数据库</title>
+<style>
+:root{
+  --bg:#f5f6f8; --panel:#ffffff; --line:#e3e6ec; --line2:#eef0f4;
+  --text:#1c2430; --text2:#5c6675; --text3:#8a94a3;
+  --brand:#1a4d8f; --brand-l:#eaf1fa; --brand-d:#123a6d;
+  --ok:#0f7b52; --ok-bg:#e6f5ee;
+  --warn:#b96a00; --warn-bg:#fdf2e2;
+  --danger:#c0392b; --danger-bg:#fdecea;
+  --gray-bg:#f0f2f5;
+  --radius:8px;
+  --shadow:0 1px 3px rgba(20,30,50,.06),0 4px 16px rgba(20,30,50,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--brand);text-decoration:none}
+a:hover{text-decoration:underline}
+button{font-family:inherit;cursor:pointer;border:none;background:none;font-size:inherit}
+.wrap{max-width:1440px;margin:0 auto;padding:0 24px}
+
+/* header */
+header{background:linear-gradient(180deg,#1a4d8f,#15406f);color:#fff;padding:20px 0 0}
+.hd-top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.hd-top h1{font-size:20px;font-weight:600;letter-spacing:.5px}
+.hd-top .sub{font-size:12.5px;color:#b9cde8}
+.hd-top .upd{margin-left:auto;font-size:12px;color:#a8c2e0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:16px 0 14px}
+.kpi{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);border-radius:var(--radius);padding:10px 12px}
+.kpi .n{font-size:20px;font-weight:650;letter-spacing:.4px;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:11.5px;color:#bdd2ea;margin-top:1px}
+.kpi.g .n{color:#7ee2b8}.kpi.r .n{color:#ffb3a8}.kpi.o .n{color:#ffd08a}
+nav{display:flex;gap:2px;border-bottom:1px solid rgba(255,255,255,.12)}
+nav button{color:#c3d6ec;padding:9px 16px;font-size:13.5px;border-radius:6px 6px 0 0;transition:.15s}
+nav button:hover{background:rgba(255,255,255,.08);color:#fff}
+nav button.on{background:var(--bg);color:var(--brand);font-weight:600}
+
+/* layout */
+main{padding:18px 0 60px}
+.tab{display:none}.tab.on{display:block}
+
+/* filters */
+.filters{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:14px;box-shadow:var(--shadow)}
+.srow{display:flex;gap:8px;margin-bottom:11px}
+.srow input{flex:1;padding:9px 13px;border:1.5px solid var(--line);border-radius:6px;font-size:14px;outline:none;transition:.15s}
+.srow input:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-l)}
+.srow button{background:var(--brand);color:#fff;padding:9px 22px;border-radius:6px;font-weight:500}
+.srow button:hover{background:var(--brand-d)}
+.srow .ghost{background:var(--gray-bg);color:var(--text2);padding:9px 14px}
+.srow .ghost:hover{background:#e5e8ed}
+.srow textarea{flex:1;padding:9px 13px;border:1.5px solid var(--line);border-radius:6px;font-size:14px;
+  outline:none;transition:.15s;resize:vertical;font-family:inherit;line-height:1.6;color:var(--text)}
+.srow textarea:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-l)}
+.ask-tip{font-size:12.5px;color:var(--text2);line-height:1.7;background:var(--brand-l);
+  border-left:3px solid var(--brand);border-radius:0 6px 6px 0;padding:9px 13px;margin-bottom:12px}
+.frow{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.frow select{padding:6px 9px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--text);font-size:12.5px;outline:none;max-width:190px}
+.frow select:focus{border-color:var(--brand)}
+.frow .lbl{font-size:12px;color:var(--text3);margin-left:4px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.chip{padding:3.5px 10px;border:1px solid var(--line);border-radius:20px;font-size:12px;color:var(--text2);background:#fff;transition:.15s}
+.chip:hover{border-color:var(--brand);color:var(--brand)}
+.chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+
+/* 场景解答操作栏 */
+.ask-actions{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.ask-actions button{padding:7px 14px;border-radius:6px;border:1px solid var(--brand);background:var(--brand);color:#fff;font-size:13px;cursor:pointer;font-weight:500;transition:.15s}
+.ask-actions button:hover{filter:brightness(1.06)}
+.ask-actions button.ghost{background:#fff;color:var(--brand)}
+
+/* 知识库 */
+.kbcard{border:1px solid var(--line);border-radius:8px;padding:13px 15px;margin-bottom:11px;background:#fff;transition:.15s}
+.kbcard:hover{border-color:#b9cbe4;box-shadow:var(--shadow)}
+.kbtop{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
+.kbscene{font-size:14.5px;font-weight:650;color:var(--text);line-height:1.5}
+.kbtime{font-size:11.5px;color:var(--text3);white-space:nowrap}
+.kblead{font-size:13px;color:var(--text2);line-height:1.8;margin:4px 0 8px;max-height:3.6em;overflow:hidden;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.kbtags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.kbactions{display:flex;gap:8px}
+.kbactions button{padding:4px 13px;border-radius:5px;font-size:12.5px;cursor:pointer}
+
+/* result */
+.rbar{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px;color:var(--text2);flex-wrap:wrap}
+.rbar b{color:var(--brand);font-size:15px;font-variant-numeric:tabular-nums}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:9px;cursor:pointer;transition:.15s;box-shadow:0 1px 2px rgba(20,30,50,.04)}
+.card:hover{border-color:#b9cbe4;box-shadow:var(--shadow);transform:translateY(-1px)}
+.card h3{font-size:15px;font-weight:600;line-height:1.5;margin-bottom:6px;color:var(--text)}
+.card h3 em{font-style:normal;background:#fff3ac;padding:0 2px;border-radius:2px}
+.meta{display:flex;gap:9px;flex-wrap:wrap;font-size:12.5px;color:var(--text3);margin-bottom:7px;align-items:center}
+.meta .dn{color:var(--brand);font-weight:500}
+.sum{font-size:13px;color:var(--text2);line-height:1.65;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.tag{padding:2px 8px;border-radius:4px;font-size:11.5px;background:var(--gray-bg);color:var(--text2);white-space:nowrap}
+.tag.tax{background:var(--brand-l);color:var(--brand)}
+.tag.ok{background:var(--ok-bg);color:var(--ok)}
+.tag.warn{background:var(--warn-bg);color:var(--warn)}
+.tag.danger{background:var(--danger-bg);color:var(--danger)}
+.tag.risk-高{background:var(--danger-bg);color:var(--danger);font-weight:600}
+.tag.sem{background:#E1F5EE;color:#0F6E56;border:1px solid #9FE1CB;font-weight:600}
+.tag.kw{background:#F1EFE8;color:#5F5E5A;border:1px solid #D3D1C7}
+.tag.risk-中{background:var(--warn-bg);color:var(--warn)}
+.tag.risk-低{background:var(--gray-bg);color:var(--text3)}
+.tag.info{background:#eaf1fd;color:#2c62c4}
+.tag.muted{background:#f3f4f6;color:#8b8f96}
+/* 引擎推断的效力结论用虚线框区分，避免与官方标注混淆 */
+.tag.inf{border:1px dashed currentColor;opacity:.92}
+.tag i{font-style:normal;font-size:10px;margin-left:3px;opacity:.75;font-weight:600}
+.st-note{margin-top:7px;font-size:12.3px;line-height:1.7;color:var(--text3);
+  background:var(--gray-bg);border-left:3px solid var(--line);padding:7px 10px;border-radius:0 4px 4px 0}
+.st-note b{color:var(--text2)}
+.pager{display:flex;gap:6px;justify-content:center;align-items:center;margin-top:18px;flex-wrap:wrap}
+.pager button{padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--text2);font-size:13px}
+.pager button:hover:not(:disabled){border-color:var(--brand);color:var(--brand)}
+.pager button:disabled{opacity:.4;cursor:not-allowed}
+.pager .cur{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600}
+.empty{text-align:center;padding:60px 20px;color:var(--text3)}
+.loading{text-align:center;padding:40px;color:var(--text3);font-size:13px}
+
+/* drawer */
+.mask{position:fixed;inset:0;background:rgba(18,26,38,.45);opacity:0;pointer-events:none;transition:.2s;z-index:90}
+.mask.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(940px,94vw);background:var(--panel);
+  transform:translateX(100%);transition:transform .26s cubic-bezier(.4,0,.2,1);z-index:91;
+  display:flex;flex-direction:column;box-shadow:-6px 0 28px rgba(20,30,50,.16)}
+.drawer.on{transform:translateX(0)}
+.dhd{padding:16px 22px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:flex-start;background:linear-gradient(180deg,#fbfcfd,#fff)}
+.dhd h2{font-size:17px;font-weight:650;line-height:1.5;flex:1}
+.dhd .x{font-size:24px;color:var(--text3);line-height:1;padding:2px 6px;border-radius:5px}
+.dhd .x:hover{background:var(--gray-bg);color:var(--text)}
+.dnav{display:flex;gap:2px;padding:0 22px;border-bottom:1px solid var(--line);background:#fbfcfd}
+.dnav button{padding:9px 15px;font-size:13px;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px}
+.dnav button:hover{color:var(--brand)}
+.dnav button.on{color:var(--brand);border-bottom-color:var(--brand);font-weight:600}
+.dbody{flex:1;overflow-y:auto;padding:18px 22px 40px}
+.dpane{display:none}.dpane.on{display:block}
+
+.infogrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:9px;margin-bottom:16px}
+.info{background:#fafbfc;border:1px solid var(--line2);border-radius:6px;padding:9px 11px}
+.info .k{font-size:11.5px;color:var(--text3);margin-bottom:2px}
+.info .v{font-size:13.5px;font-weight:500;color:var(--text);word-break:break-all}
+.sec{margin-bottom:20px}
+.sec h4{font-size:13.5px;font-weight:650;color:var(--brand);margin-bottom:9px;padding-left:9px;border-left:3px solid var(--brand)}
+.sec ul{list-style:none}
+.sec li{padding:7px 0 7px 18px;position:relative;font-size:13.3px;line-height:1.7;color:var(--text2);border-bottom:1px dashed var(--line2)}
+.sec li:last-child{border-bottom:none}
+.sec li:before{content:"";position:absolute;left:4px;top:15px;width:5px;height:5px;border-radius:50%;background:var(--brand);opacity:.55}
+.callout{background:var(--brand-l);border-left:3px solid var(--brand);border-radius:0 6px 6px 0;padding:11px 14px;font-size:13.3px;line-height:1.7;color:#1f3a5c}
+.callout.warn{background:var(--warn-bg);border-color:var(--warn);color:#7a4a05}
+.callout.danger{background:var(--danger-bg);border-color:var(--danger);color:#8c2a1f}
+.amt{display:flex;gap:6px;flex-wrap:wrap}
+.amt span{background:#fff6e5;border:1px solid #f2dcae;color:#8a5a00;padding:3px 9px;border-radius:5px;font-size:12.5px;font-weight:500}
+
+/* relation */
+.rel{border:1px solid var(--line);border-radius:6px;padding:10px 12px;margin-bottom:7px;background:#fff;transition:.15s}
+.rel:hover{border-color:#b9cbe4;background:#fbfcfe}
+.rel .rt{display:inline-block;padding:1.5px 8px;border-radius:4px;font-size:11px;font-weight:600;margin-right:7px}
+.rt-abolish{background:var(--danger-bg);color:var(--danger)}
+.rt-supersede{background:var(--warn-bg);color:var(--warn)}
+.rt-revise{background:#ede7f6;color:#5e35b1}
+.rt-cite{background:var(--gray-bg);color:var(--text2)}
+.rel .rtitle{font-size:13.3px;color:var(--text);font-weight:500;line-height:1.55}
+.rel .rnum{font-size:12.5px;color:var(--brand);font-family:ui-monospace,Consolas,monospace}
+.rel .rev{font-size:12px;color:var(--text3);margin-top:5px;line-height:1.6;background:#fafbfc;padding:6px 9px;border-radius:4px}
+.rel.clickable{cursor:pointer}
+
+.fulltext{font-size:14px;line-height:2;color:#2a3442;white-space:pre-wrap;word-break:break-word;
+  background:#fcfcfd;border:1px solid var(--line2);border-radius:6px;padding:18px 20px;font-family:inherit}
+.appx{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.appx a{background:var(--brand-l);padding:5px 11px;border-radius:5px;font-size:12.5px}
+
+/* changes / watch */
+.clist .card{cursor:pointer}
+.ct{display:inline-block;padding:2px 9px;border-radius:4px;font-size:11.5px;font-weight:600;margin-right:8px}
+.ct-new{background:var(--ok-bg);color:var(--ok)}
+.ct-abolish{background:var(--danger-bg);color:var(--danger)}
+.ct-aging{background:var(--warn-bg);color:var(--warn)}
+.ct-content{background:#ede7f6;color:#5e35b1}
+.ct-meta{background:var(--gray-bg);color:var(--text2)}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:900px){.split{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:15px;box-shadow:var(--shadow)}
+.panel h3{font-size:14.5px;font-weight:650;margin-bottom:11px;color:var(--text);display:flex;align-items:center;gap:8px}
+.panel h3 .cnt{background:var(--brand-l);color:var(--brand);font-size:11.5px;padding:1px 8px;border-radius:10px;font-weight:600}
+.mini{padding:9px 0;border-bottom:1px dashed var(--line2);cursor:pointer}
+.mini:last-child{border-bottom:none}
+.mini:hover .mt{color:var(--brand)}
+.mt{font-size:13.2px;line-height:1.55;color:var(--text);margin-bottom:3px}
+.mm{font-size:11.8px;color:var(--text3)}
+/* AI 具体方案面板 */
+.ai-plan{background:linear-gradient(180deg,#f3f8ff 0%,var(--panel) 120px);border-color:#bcd4f2}
+.ai-plan h3 .cnt{background:#dce9fb;color:#1a4d8f}
+.ai-summary{font-size:14.5px;line-height:1.75;color:var(--text);font-weight:600;margin-bottom:4px}
+.ai-sub{font-size:12px;font-weight:700;color:var(--brand);margin:13px 0 6px;letter-spacing:.3px}
+.ai-steps,.ai-risks{margin:0 0 0 20px;font-size:13.2px;line-height:1.85;color:var(--text)}
+.ai-steps li,.ai-risks li{margin-bottom:7px}
+.ai-calc{background:#0f172a;color:#e2e8f0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:12.6px;line-height:1.7;padding:10px 12px;border-radius:7px;white-space:pre-wrap}
+.ai-basis{display:flex;flex-wrap:wrap;gap:7px}
+.ai-basis span{background:#eef2f7;border:1px solid var(--line);border-radius:5px;padding:3px 9px;font-size:12px;color:var(--text2)}
+.ai-foot{margin-top:13px;font-size:11.5px;color:var(--text3);line-height:1.6;border-top:1px dashed var(--line2);padding-top:9px}
+.scroll{max-height:520px;overflow-y:auto}
+.bars{display:flex;align-items:flex-end;gap:2px;height:80px;margin-top:10px}
+.bar{flex:1;background:linear-gradient(180deg,#4a7fbf,#1a4d8f);border-radius:2px 2px 0 0;min-height:2px;position:relative}
+.bar:hover{background:#c0392b}
+.bar:hover:after{content:attr(data-t);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);
+  background:#1c2430;color:#fff;font-size:11px;padding:3px 7px;border-radius:4px;white-space:nowrap;z-index:5}
+.axis{display:flex;justify-content:space-between;font-size:10.5px;color:var(--text3);margin-top:4px}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:#c9cfd8;border-radius:5px}
+::-webkit-scrollbar-thumb:hover{background:#adb5c0}
+::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="hd-top">
+      <h1>财税政策数据库</h1>
+      <span class="sub">国家税务总局政策法规库 · 全量历史归集 · 自动解读与新旧对比</span>
+      <span class="upd" id="updTime"></span>
+    </div>
+    <div class="kpis" id="kpis"></div>
+    <nav>
+      <button class="on" data-tab="search">政策检索</button>
+      <button data-tab="ask">场景解答</button>
+      <button data-tab="changes">最新动态</button>
+      <button data-tab="watch">时效预警</button>
+      <button data-tab="kb">我的知识库</button>
+      <button data-tab="overview">库存概览</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- 检索 -->
+  <section class="tab on" id="tab-search">
+    <div class="filters">
+      <div class="srow">
+        <input id="q" placeholder="搜索政策标题、文号或全文内容，如：留抵退税、财税〔2016〕36号、研发费用加计扣除">
+        <button onclick="doSearch(1)">检索</button>
+        <button class="ghost" onclick="resetF()">重置</button>
+      </div>
+      <div class="frow">
+        <select id="f-tax"><option value="">全部税种</option></select>
+        <select id="f-domain"><option value="">全部领域</option></select>
+        <select id="f-level"><option value="">全部效力级次</option></select>
+        <select id="f-status">
+          <option value="">全部效力状态</option>
+          <option value="在用">✔ 现行在用（含推定）</option>
+          <option value="失效">✘ 已废止/失效</option>
+        </select>
+        <select id="f-aging"><option value="">源站时效标注</option></select>
+        <select id="f-year"><option value="">全部年份</option></select>
+        <select id="f-risk"><option value="">全部关注度</option><option>高</option><option>中</option><option>低</option></select>
+        <span class="lbl">排序</span>
+        <select id="f-sort">
+          <option value="date">成文日期 ↓</option>
+          <option value="rel">相关度</option>
+          <option value="risk">关注度优先</option>
+          <option value="hot">热度</option>
+          <option value="date_asc">成文日期 ↑</option>
+        </select>
+      </div>
+      <div class="chips" id="quick"></div>
+    </div>
+    <div class="rbar" id="rbar"></div>
+    <div id="list"></div>
+    <div class="pager" id="pager"></div>
+  </section>
+
+  <!-- 场景解答 -->
+  <section class="tab" id="tab-ask">
+    <div class="filters">
+      <div class="ask-tip">
+        描述您实际工作中遇到的业务场景，系统将从<b>全量政策库</b>中匹配最相关文件，给出<b>处理要点</b>并可直接<b>跳转原文</b>。
+        越具体越好：涉及哪个税种、何种业务动作（开票 / 申报 / 预缴 / 抵扣 / 享受优惠）、金额、企业身份等。按 <b>Ctrl+Enter</b> 快速解答。
+      </div>
+      <div class="srow">
+        <textarea id="ask-q" rows="3" placeholder="例如：建筑企业收到预收款，如何预缴增值税？发票怎么开？"></textarea>
+      </div>
+      <div class="srow" style="margin-bottom:9px">
+        <button onclick="doAsk()">智能解答</button>
+        <button class="ghost" onclick="resetAsk()">清空</button>
+      </div>
+      <div class="chips" id="ask-quick"></div>
+    </div>
+    <div id="ask-out"></div>
+  </section>
+
+  <!-- 动态 -->
+  <section class="tab" id="tab-changes">
+    <div class="callout info" style="margin-bottom:12px">
+      「最新动态」只记录<strong>首次全量入库之后</strong>真实检测到的新增、废止、时效/内容修订等变更；每日 07:00 自动增量巡检并写入此处。
+    </div>
+    <div class="filters">
+      <div class="frow">
+        <span class="lbl">时间范围</span>
+        <select id="c-days"><option value="7">近7天</option><option value="30" selected>近30天</option>
+          <option value="90">近90天</option><option value="3650">全部</option></select>
+        <span class="lbl">变更类型</span>
+        <select id="c-type"><option value="">全部</option><option value="new">新增入库</option>
+          <option value="abolish">废止</option><option value="aging">时效变更</option>
+          <option value="content">内容修订</option></select>
+      </div>
+    </div>
+    <div class="rbar" id="cbar"></div>
+    <div id="clist" class="clist"></div>
+  </section>
+
+  <!-- 预警 -->
+  <section class="tab" id="tab-watch">
+    <div class="split">
+      <div class="panel">
+        <h3>即将到期政策 <span class="cnt" id="n-exp">0</span></h3>
+        <div style="font-size:12.5px;color:var(--text3);margin-bottom:9px">
+          执行期限在未来 180 天内届满，需提前评估是否延续
+        </div>
+        <div class="scroll" id="expList"></div>
+      </div>
+      <div class="panel">
+        <h3>尚未生效政策 <span class="cnt" id="n-pend">0</span></h3>
+        <div style="font-size:12.5px;color:var(--text3);margin-bottom:9px">
+          已发布但未到施行日，需提前做好业务与系统准备
+        </div>
+        <div class="scroll" id="pendList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 知识库 -->
+  <section class="tab" id="tab-kb">
+    <div class="ask-tip">
+      这里保存您在日常工作中反复遇到的业务场景与对应解答（基于全量政策库自动生成）。可一键复用、导出或删除，沉淀为团队共享的实务知识。
+    </div>
+    <div class="filters">
+      <div class="srow">
+        <input id="kb-q" placeholder="搜索已保存的场景，如：建筑预收款、小微所得税…">
+        <button onclick="loadKb()">搜索</button>
+        <button class="ghost" onclick="loadKb(true)">全部</button>
+      </div>
+    </div>
+    <div id="kblist"></div>
+  </section>
+
+  <!-- 概览 -->
+  <section class="tab" id="tab-overview">
+    <div class="split">
+      <div class="panel">
+        <h3>历年政策发布量</h3>
+        <div class="bars" id="yearBars"></div>
+        <div class="axis" id="yearAxis"></div>
+      </div>
+      <div class="panel">
+        <h3>效力状态分布</h3>
+        <div id="agingDist"></div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <h3>使用说明</h3>
+      <div style="font-size:13.2px;line-height:1.9;color:var(--text2)">
+        <b>数据来源</b>：国家税务总局政策法规库（fgk.chinatax.gov.cn），涵盖法律、行政法规、国务院文件、税务部门规章、财税文件、税务规范性文件、其他文件、工作通知八大类，以及官方政策解读。<br>
+        <b>自动解读</b>：每件政策自动提取生效日期、执行期限、核心条款要点、纳税人义务动作、税率与金额要素，并按税种、关注领域、关注度分级归类。<br>
+        <b>新旧对比</b>：解析正文中的废止、修订、替代表述，建立政策沿革关系。打开任一政策详情，可查看其废止的旧文，以及后续被哪些新文废止或引用。<br>
+        <b>每日更新</b>：定时任务自动抓取新政策并检测既有政策的时效变更与内容修订，结果汇入「最新动态」。<br>
+        <b>免责提示</b>：自动解读为规则引擎生成的辅助参考，实际适用请以原文及主管税务机关口径为准。
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="mask" id="mask" onclick="closeD()"></div>
+<div class="drawer" id="drawer">
+  <div class="dhd"><h2 id="d-title"></h2><button class="x" onclick="closeD()">&times;</button></div>
+  <div class="dnav">
+    <button class="on" data-p="read">智能解读</button>
+    <button data-p="lineage">政策沿革</button>
+    <button data-p="full">政策全文</button>
+    <button data-p="official">官方解读</button>
+  </div>
+  <div class="dbody">
+    <div class="dpane on" id="p-read"></div>
+    <div class="dpane" id="p-lineage"></div>
+    <div class="dpane" id="p-full"></div>
+    <div class="dpane" id="p-official"></div>
+  </div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num=n=>(n==null?'-':n.toLocaleString('zh-CN'));
+let ST={page:1,total:0,size:20,kw:''};
+
+const QUICK=['留抵退税','研发费用加计扣除','小型微利企业','专项附加扣除','虚开发票','数电发票',
+             '出口退税','纳税信用','汇算清缴','稽查','社保费','印花税'];
+
+const ASK_EXAMPLES=['建筑企业收到预收款如何预缴增值税与开票','小型微利企业年应纳税所得额200万所得税怎么算',
+  '全年一次性奖金单独计税还是并入综合所得','研发费用加计扣除比例及需留存的资料','劳务派遣差额征税销售额怎么确定',
+  '数电票授信额度不够怎么办','增值税进项发票勾选认证与抵扣时限','企业注销前未弥补亏损如何处理'];
+
+/* ---------- 健壮 JSON 请求（瞬时空响应自动重试一次） ---------- */
+async function safeJSON(url, tries){
+  tries = tries || 2;
+  let lastErr;
+  for(let i=0;i<tries;i++){
+    try{
+      const resp = await fetch(url);
+      if(!resp.ok) throw new Error('HTTP '+resp.status);
+      const txt = await resp.text();
+      if(!txt) throw new Error('空响应');
+      return JSON.parse(txt);
+    }catch(e){ lastErr=e; if(i<tries-1) await new Promise(r=>setTimeout(r,400)); }
+  }
+  throw lastErr;
+}
+
+/* ---------- init ---------- */
+async function init(){
+  try{
+  const s=await safeJSON('/api/stats');
+  $('#kpis').innerHTML=`
+    <div class="kpi"><div class="n">${num(s.total)}</div><div class="l">政策文件总量</div></div>
+    <div class="kpi g"><div class="n">${num(s.valid)}</div><div class="l">全文有效</div></div>
+    <div class="kpi o"><div class="n">${num(s.partial)}</div><div class="l">部分失效</div></div>
+    <div class="kpi r"><div class="n">${num(s.abolished)}</div><div class="l">已废止</div></div>
+    <div class="kpi o"><div class="n">${num(s.pending)}</div><div class="l">尚未生效</div></div>
+    <div class="kpi"><div class="n">${num(s.interp)}</div><div class="l">官方解读</div></div>
+    <div class="kpi"><div class="n">${num(s.relations)}</div><div class="l">沿革关系</div></div>
+    <div class="kpi"><div class="n">${s.year_min||'-'}<span style="font-size:13px">–</span>${s.year_max||'-'}</div><div class="l">年份跨度</div></div>`;
+  $('#updTime').textContent=s.last_crawl?('最近更新 '+s.last_crawl):'';
+  drawOverview(s);
+
+  const f=await safeJSON('/api/facets');
+  const fill=(id,arr)=>{const e=$(id);arr.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;e.appendChild(o)})};
+  fill('#f-tax',f.taxes); fill('#f-domain',f.domains); fill('#f-level',f.levels);
+  fill('#f-status',f.statuses); fill('#f-aging',f.agings); fill('#f-year',f.years);
+  $('#quick').innerHTML=QUICK.filter(Boolean).map(k=>`<button class="chip" onclick="quick(this,'${k}')">${k}</button>`).join('');
+  $('#ask-quick').innerHTML=ASK_EXAMPLES.map(k=>`<button class="chip" onclick="askEx(this)">${k}</button>`).join('');
+  doSearch(1);
+  }catch(e){
+    console.error('init error',e);
+    $('#list').innerHTML=`<div class="empty" style="color:var(--danger)">页面初始化出错：${esc(e.message||e)}<br>请按 F12 打开控制台查看详情并刷新重试</div>`;
+  }
+}
+function quick(el,k){
+  const on=el.classList.contains('on');
+  $$('#quick .chip').forEach(c=>c.classList.remove('on'));
+  $('#q').value = on?'':k; if(!on) el.classList.add('on');
+  doSearch(1);
+}
+function resetF(){
+  $('#q').value='';['#f-tax','#f-domain','#f-level','#f-status','#f-aging','#f-year','#f-risk'].forEach(i=>$(i).value='');
+  $('#f-sort').value='date'; $$('#quick .chip').forEach(c=>c.classList.remove('on')); doSearch(1);
+}
+
+/* ---------- search ---------- */
+async function doSearch(page){
+  ST.page=page||1;
+  const kw=$('#q').value.trim(); ST.kw=kw;
+  const p=new URLSearchParams({q:kw,tax:$('#f-tax').value,domain:$('#f-domain').value,
+    level:$('#f-level').value,status:$('#f-status').value,aging:$('#f-aging').value,year:$('#f-year').value,
+    risk:$('#f-risk').value,sort:$('#f-sort').value,page:ST.page,size:ST.size});
+  $('#list').innerHTML='<div class="loading">检索中…</div>';
+  try{
+    const r=await safeJSON('/api/search?'+p);
+    ST.total=r.total;
+    $('#rbar').innerHTML=`共检索到 <b>${num(r.total)}</b> 件政策${kw?`（关键词：${esc(kw)}）`:''}`;
+    if(!r.items||!r.items.length){$('#list').innerHTML='<div class="empty">未找到匹配的政策，试试调整关键词或放宽筛选条件</div>';$('#pager').innerHTML='';return}
+    $('#list').innerHTML=r.items.map(cardHTML).join('');
+    drawPager();
+  }catch(e){
+    console.error(e);
+    $('#list').innerHTML=`<div class="empty" style="color:var(--danger)">检索出错：${esc(e.message||e)}<br>请按 F12 打开控制台查看详情并刷新重试</div>`;
+  }
+}
+function hl(t,kw){
+  t=esc(t); if(!kw)return t;
+  kw.split(/\s+/).filter(Boolean).forEach(k=>{
+    t=t.replace(new RegExp('('+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<em>$1</em>')});
+  return t;
+}
+function agTag(a){
+  if(!a)return '';
+  const c=a.includes('废止')?'danger':(a==='全文有效'?'ok':(a==='尚未生效'?'warn':(a==='部分失效'?'warn':'')));
+  return `<span class="tag ${c}">${esc(a)}</span>`;
+}
+// 效力结论：官方标注实心，引擎推断虚线框+「推」，让使用者一眼分清依据强度
+const ST_COLOR={'有效':'ok','推定有效':'ok','未见废止记录':'muted','已废止':'danger',
+  '已失效':'danger','已到期':'danger','已修改':'info','部分有效':'warn','部分失效':'warn',
+  '部分废止':'warn','执行期已过':'warn','尚未生效':'warn','将废止':'warn','存疑':'muted'};
+function stTag(st,src,ev){
+  if(!st)return '';
+  const inf = src && src!=='官方标注';
+  return `<span class="tag ${ST_COLOR[st]||''} ${inf?'inf':''}" title="${esc((src||'')+'：'+(ev||''))}">`
+       + `${esc(st)}${inf?'<i>推</i>':''}</span>`;
+}
+function arr(v){return Array.isArray(v)?v:(v?String(v).split(','):[]);}
+function cardHTML(x){
+  const taxes=arr(x.taxes).slice(0,3), domains=arr(x.domains).slice(0,2);
+  return `<div class="card" onclick="openD('${x.id}')">
+    <h3>${hl(x.title,ST.kw)}</h3>
+    <div class="meta">
+      ${x.doc_num?`<span class="dn">${hl(x.doc_num,ST.kw)}</span>`:''}
+      <span>${x.cwrq||''}</span>
+      ${x.pub_name?`<span>${esc(x.pub_name)}</span>`:''}
+      ${x.level?`<span>${esc(x.level)}</span>`:''}
+    </div>
+    ${x.summary?`<div class="sum">${esc(x.summary)}</div>`:''}
+    <div class="tags">
+      ${stTag(x.status,x.st_src,x.st_ev)}
+      ${x.risk?`<span class="tag risk-${x.risk}">关注度 ${x.risk}</span>`:''}
+      ${taxes.map(t=>`<span class="tag tax">${esc(t)}</span>`).join('')}
+      ${domains.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}
+      ${x.eff?`<span class="tag">生效 ${esc(x.eff)}</span>`:''}
+      ${x.exp?`<span class="tag warn">执行至 ${esc(x.exp)}</span>`:''}
+      ${x.abolished_n?`<span class="tag danger">废止${x.abolished_n}件旧文</span>`:''}
+    </div></div>`;
+}
+function drawPager(){
+  const tp=Math.ceil(ST.total/ST.size), p=ST.page;
+  if(tp<=1){$('#pager').innerHTML='';return}
+  let h=`<button ${p<=1?'disabled':''} onclick="doSearch(${p-1})">上一页</button>`;
+  const arr=new Set([1,tp,p,p-1,p+1,p-2,p+2]);
+  const ps=[...arr].filter(i=>i>=1&&i<=tp).sort((a,b)=>a-b);
+  let last=0;
+  ps.forEach(i=>{if(last&&i-last>1)h+=`<span style="color:var(--text3)">…</span>`;
+    h+=`<button class="${i===p?'cur':''}" onclick="doSearch(${i})">${i}</button>`;last=i});
+  h+=`<button ${p>=tp?'disabled':''} onclick="doSearch(${p+1})">下一页</button>
+      <span style="color:var(--text3);font-size:12.5px;margin-left:6px">共 ${tp} 页</span>`;
+  $('#pager').innerHTML=h;
+}
+
+/* ---------- 场景解答 ---------- */
+function hlK(t,kws){
+  t=esc(t);
+  (kws||[]).forEach(k=>{ if(!k)return;
+    try{t=t.replace(new RegExp('('+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<em>$1</em>')}catch(e){} });
+  return t;
+}
+async function doAsk(){
+  const q=$('#ask-q').value.trim();
+  if(!q){alert('请先描述业务场景');return}
+  $('#ask-out').innerHTML='<div class="loading">正在检索全量政策库并生成解答…</div>';
+  const r=await (await fetch('/api/ask?'+new URLSearchParams({q,top:6}))).json();
+  renderAsk(r,q);
+}
+function resetAsk(){$('#ask-q').value='';$('#ask-out').innerHTML='';}
+function askEx(el){$('#ask-q').value=el.textContent;doAsk();}
+function askCardHTML(x){
+  const kws=arr(x.matched_kw).slice(0,5), taxes=arr(x.taxes).slice(0,3), domains=arr(x.domains).slice(0,2);
+  return `<div class="card" onclick="openD('${x.id}')">
+    <h3>${hlK(x.title,kws)}</h3>
+    <div class="meta">
+      ${x.doc_num?`<span class="dn">${hlK(x.doc_num,kws)}</span>`:''}
+      <span>${x.cwrq||''}</span>
+      ${x.pub_name?`<span>${esc(x.pub_name)}</span>`:''}
+      ${x.level?`<span>${esc(x.level)}</span>`:''}
+    </div>
+    ${x.excerpt?`<div class="sum" style="display:block;-webkit-line-clamp:3">${esc(x.excerpt)}</div>`:''}
+    <div class="tags">
+      ${stTag(x.status,x.st_src,x.st_ev)}
+      ${x.risk?`<span class="tag risk-${x.risk}">关注度 ${x.risk}</span>`:''}
+      ${taxes.map(t=>`<span class="tag tax">${esc(t)}</span>`).join('')}
+      ${domains.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}
+      ${x.eff?`<span class="tag">生效 ${esc(x.eff)}</span>`:''}
+      ${x.exp?`<span class="tag warn">执行至 ${esc(x.exp)}</span>`:''}
+      ${x.abolished_n?`<span class="tag danger">废止${x.abolished_n}件旧文</span>`:''}
+    </div></div>`;
+}
+function renderAsk(r,q){
+  if(r.error){$('#ask-out').innerHTML=`<div class="empty">${esc(r.error==='empty'?'请先描述业务场景':'出错了')}</div>`;return}
+  window._askData={r,q};
+  const a=r.answer||{};
+  const rmode = r.retrieval==='semantic';
+  const sReady = r.semantic_ready===true;
+  const rbadge = rmode
+    ? `<span class="tag sem">语义向量召回</span>`
+    : `<span class="tag kw">关键词召回</span>`;
+  let hint='';
+  if(!rmode && !sReady){
+    hint=`<div class="callout warn" style="margin:10px 0 14px">当前为关键词召回（尚未启用语义向量检索）。`
+        +`运行 <code>python scripts/build_embeddings.py</code> 为全库生成向量后，可升级为「语义召回」，`
+        +`对同义、近义、隐含相关政策的命中率更高，AI 给出的方案也更贴合。</div>`;
+  }else if(!rmode && sReady){
+    hint=`<div class="callout info" style="margin:10px 0 14px">本次未匹配到语义向量候选，已自动降级为关键词召回。</div>`;
+  }
+  let h=`<div class="ask-actions">
+      <button onclick="saveKb()">★ 存到知识库</button>
+      <button class="ghost" onclick="exportWord()">导出 Word</button>
+      <button class="ghost" onclick="exportPdf()">导出 PDF</button>
+    </div><div style="margin:2px 0 10px">${rbadge}</div>`+hint+`<div id="ask-export">`;
+
+  // ---------- AI / 系统给出的「具体方案」（首要展示） ----------
+  const llm=a.llm;
+  if(llm && typeof llm==='object' && (llm.summary || (llm.steps&&llm.steps.length))){
+    const isAI = llm._src!=='rule';
+    const badge = isAI
+      ? `AI 生成 · 基于 ${r.items.length} 件政策`
+      : `系统自动方案 · 基于政策结构化提取（${r.items.length} 件）`;
+    h+=`<div class="panel ai-plan">
+      <h3>${isAI?'AI 给出的具体方案':'智能方案（照着做）'} <span class="cnt">${badge}</span></h3>`;
+    if(llm.summary) h+=`<div class="ai-summary">${esc(llm.summary)}</div>`;
+    if(llm.steps&&llm.steps.length){
+      h+=`<div class="ai-sub">操作步骤</div><ol class="ai-steps">`+
+         llm.steps.map(s=>`<li>${esc(s)}</li>`).join('')+`</ol>`;
+    }
+    if(llm.calc) h+=`<div class="ai-sub">计算 / 金额</div><div class="ai-calc">${esc(llm.calc)}</div>`;
+    if(llm.deadline) h+=`<div class="ai-sub">办理时限</div><div>${esc(llm.deadline)}</div>`;
+    if(llm.risks&&llm.risks.length){
+      h+=`<div class="ai-sub">风险提示</div><ul class="ai-risks">`+
+         llm.risks.map(s=>`<li>${esc(s)}</li>`).join('')+`</ul>`;
+    }
+    if(llm.basis&&llm.basis.length){
+      h+=`<div class="ai-sub">依据政策</div><div class="ai-basis">`+
+         llm.basis.map(b=>`<span>${esc(b)}</span>`).join('')+`</div>`;
+    }
+    if(llm._ai_failed) h+=`<div class="ai-note">⚠️ AI 本次未返回有效结构化结果，已切换为离线规则方案；可点击「重新解答」重试。</div>`;
+    h+=`<div class="ai-foot">本方案由 AI 依据政策库生成，给出的是可直接落地的处理方向与结果，仅供参考；`
+       +`重大事项请核对政策原文与主管税务机关口径。</div>`;
+    h+=`</div>`;
+  } else if(llm && typeof llm==='object' && llm._error){
+    var tip = llm._config_err
+      ? `请检查 TAXDB_LLM_KEY / TAXDB_LLM_URL 配置是否正确，或暂时使用下方「政策依据」。`
+      : `模型响应超时或访问量过大，可点击「重新解答」重试，或暂时使用下方「政策依据」。`;
+    h+=`<div class="callout danger" style="margin-bottom:14px">AI 调用失败：${esc(llm._error)}<br>${tip}</div>`;
+  } else if(typeof llm==='string' && llm){
+    h+=`<div class="panel" style="margin-bottom:14px"><h3>智能解答（AI 模型）</h3>
+      <div class="callout" style="white-space:pre-wrap;line-height:1.85">${esc(llm)}</div></div>`;
+  } else {
+    h+=`<div class="callout info" style="margin-bottom:14px">未配置 AI：设置环境变量 `
+       +`<code>TAXDB_LLM_KEY</code> / <code>TAXDB_LLM_URL</code>（可选 <code>TAXDB_LLM_MODEL</code>）后，`
+       +`可获得「照着做就能落地」的具体方案。下方为当前可用的政策依据与综合建议。</div>`;
+  }
+
+  // ---------- 政策依据与综合建议（次要） ----------
+  if(a.lead){
+    h+=`<div class="panel" style="margin-bottom:14px"><h3>政策依据与综合建议 ${r.keywords&&r.keywords.length?`<span class="cnt">${r.keywords.length} 个关键词</span>`:''}</h3>
+      <div style="font-size:13.5px;line-height:1.9;color:var(--text)">${esc(a.lead)}</div>`;
+    if(a.points&&a.points.length){
+      h+=`<ol style="margin:10px 0 0 18px;font-size:13.3px;line-height:1.95;color:var(--text2)">`+
+        a.points.map(pt=>`<li style="margin-bottom:9px"><b style="color:var(--text)">${esc(pt.title)}</b>`
+          +`${pt.doc_num?` <span style="color:var(--brand);font-family:ui-monospace,monospace">${esc(pt.doc_num)}</span>`:''} `
+          +`${pt.status?stTag(pt.status,pt.st_src,''):''}`
+          +(pt.key_points&&pt.key_points.length?`<br><span style="color:var(--text3)">要点：</span>${pt.key_points.map(esc).join('；')}`:'')
+          +(pt.excerpt?`<br><span style="color:var(--text3)">依据：</span>${esc(pt.excerpt)}`:'')
+          +`</li>`).join('')+`</ol>`;
+    }
+    if(a.note) h+=`<div class="callout ${a.note_type||'warn'}" style="margin-top:11px">${esc(a.note)}</div>`;
+    h+=`</div>`;
+  }
+  if(r.items&&r.items.length){
+    h+=`<div class="rbar">匹配到 <b>${r.items.length}</b> 件相关政策 · 点击卡片查看详情、政策沿革与原文</div>`;
+    h+=r.items.map(askCardHTML).join('');
+  }else{
+    h+=`<div class="empty">未检索到相关政策，请调整场景描述或补充关键词（如税种、业务动作、金额、身份等）</div>`;
+  }
+  h+=`</div>`;
+  $('#ask-out').innerHTML=h;
+}
+
+/* ---------- 知识库 + 导出 ---------- */
+function saveKb(){
+  const d=window._askData;
+  if(!d||!d.r||d.r.error){alert('请先在「场景解答」里进行一次解答，再保存到知识库');return}
+  const a=d.r.answer||{};
+  const refs=(d.r.items||[]).map(it=>({title:it.title,doc_num:it.doc_num,status:it.status,url:it.url}));
+  const payload={scene:d.q, lead:a.lead||'', points:a.points||[], keywords:d.r.keywords||[], refs, llm:a.llm||null};
+  fetch('/api/kb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+    .then(r=>r.json()).then(j=>{
+      if(j.ok){alert('已保存到「我的知识库」');loadKb(true);}
+      else alert('保存失败：'+(j.error||'未知错误'));
+    }).catch(e=>alert('保存出错：'+e.message));
+}
+function loadKb(all){
+  const q=all?($('#kb-q').value='',''):($('#kb-q').value.trim()||'');
+  fetch('/api/kb'+(q?('?q='+encodeURIComponent(q)):'')).then(r=>r.json()).then(j=>renderKb(j.items||[]));
+}
+function renderKb(items){
+  const box=$('#kblist');
+  window._kbMap=window._kbMap||{};
+  if(!items.length){box.innerHTML='<div class="empty" style="padding:30px">知识库还是空的。在「场景解答」里解答一个业务场景后，点「★ 存到知识库」即可沉淀下来。</div>';return}
+  box.innerHTML=items.map(k=>{
+    window._kbMap[k.id]=k;
+    const planHtml = (k.llm && (k.llm.summary || (k.llm.steps&&k.llm.steps.length)))
+      ? askPlanExportHtml({llm:k.llm}, {items:[]}) : '';
+    return `<div class="kbcard">
+      <div class="kbtop"><span class="kbscene">${esc(k.scene)}</span><span class="kbtime">${esc((k.created_at||'').replace('T',' '))}</span></div>
+      ${k.lead?`<div class="kblead">${esc(k.lead)}</div>`:''}
+      ${planHtml}
+      ${k.keywords&&k.keywords.length?`<div class="kbtags">${k.keywords.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>`:''}
+      <div class="kbactions">
+        <button class="ghost" onclick="useKb(${k.id})">复用解答</button>
+        <button class="ghost" onclick="delKb(${k.id})">删除</button>
+      </div></div>`;
+  }).join('');
+}
+function useKb(id){
+  const k=(window._kbMap||{})[id]; if(!k)return;
+  $('#ask-q').value=k.scene;
+  $$('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab==='ask'));
+  $$('.tab').forEach(s=>s.classList.toggle('on',s.id==='tab-ask'));
+  doAsk();
+}
+function delKb(id){
+  if(!confirm('确定删除这条知识库记录？'))return;
+  fetch('/api/kb?id='+id,{method:'DELETE'}).then(r=>r.json()).then(()=>loadKb());
+}
+const _KB_CSS='body{font-family:"Microsoft YaHei",SimSun,Arial;color:#1a1a1a;line-height:1.85;padding:24px}'
+  +'.panel{border:1px solid #ddd;border-radius:6px;padding:14px;margin-bottom:14px}'
+  +'h2,h3{color:#1a4d8f}.tag{display:inline-block;background:#eef3f9;border:1px solid #c9d6e8;color:#1a4d8f;padding:1px 8px;border-radius:4px;font-size:12px;margin:2px}'
+  +'.callout{border-left:3px solid #1a4d8f;background:#f4f8fd;padding:10px 14px;margin:10px 0}'
+  +'.card{border:1px solid #e3e3e3;border-radius:6px;padding:12px;margin-bottom:10px}'
+  +'.dn{color:#1a4d8f;font-family:monospace}.rbar{margin:10px 0;color:#555}.sum{color:#444}';
+function askPlanExportHtml(a,r){
+  // 将「AI / 系统给出的具体方案」渲染为导出用 HTML（内联样式，兼容 Word/PDF）
+  const llm=a.llm;
+  let h='';
+  if(llm && typeof llm==='object' && (llm.summary || (llm.steps&&llm.steps.length))){
+    const isAI = llm._src!=='rule';
+    h+='<div class="panel" style="margin-bottom:14px"><h3>'+(isAI?'AI 给出的具体方案':'智能方案（照着做）')+'</h3>';
+    if(llm.summary) h+='<div style="font-size:14px;line-height:1.95;color:#1a1a1a;margin:6px 0">'+esc(llm.summary)+'</div>';
+    if(llm.steps&&llm.steps.length){
+      h+='<div style="font-weight:600;color:#1a4d8f;margin-top:10px">操作步骤</div>'
+        +'<ol style="margin:6px 0 0 18px;font-size:13.5px;line-height:1.95;color:#333">'
+        +llm.steps.map(s=>'<li style="margin-bottom:7px">'+esc(s)+'</li>').join('')+'</ol>';
+    }
+    if(llm.calc) h+='<div style="font-weight:600;color:#1a4d8f;margin-top:10px">计算 / 金额</div><div style="font-size:13.5px;line-height:1.9;color:#333">'+esc(llm.calc)+'</div>';
+    if(llm.deadline) h+='<div style="font-weight:600;color:#1a4d8f;margin-top:10px">办理时限</div><div style="font-size:13.5px;line-height:1.9;color:#333">'+esc(llm.deadline)+'</div>';
+    if(llm.risks&&llm.risks.length){
+      h+='<div style="font-weight:600;color:#1a4d8f;margin-top:10px">风险提示</div>'
+        +'<ul style="margin:6px 0 0 18px;font-size:13.5px;line-height:1.95;color:#333">'
+        +llm.risks.map(s=>'<li style="margin-bottom:7px">'+esc(s)+'</li>').join('')+'</ul>';
+    }
+    if(llm.basis&&llm.basis.length){
+      h+='<div style="font-weight:600;color:#1a4d8f;margin-top:10px">依据政策</div><div style="margin-top:4px">'
+        +llm.basis.map(b=>'<span class="tag">'+esc(b)+'</span>').join(' ')+'</div>';
+    }
+    h+='<div style="font-size:12px;color:#999;margin-top:12px;border-top:1px solid #eee;padding-top:8px">本方案由 AI 依据政策库生成，给出的是可直接落地的处理方向与结果，仅供参考；重大事项请核对政策原文与主管税务机关口径。</div>';
+    h+='</div>';
+  } else if(llm && typeof llm==='object' && llm._error){
+    h+='<div class="callout danger" style="margin-bottom:14px">AI 调用失败：'+esc(llm._error)+'</div>';
+  } else if(typeof llm==='string' && llm){
+    h+='<div class="panel" style="margin-bottom:14px"><h3>智能解答（AI 模型）</h3><div class="callout" style="white-space:pre-wrap;line-height:1.85">'+esc(llm)+'</div></div>';
+  }
+  return h;
+}
+function _kbExportHtml(){
+  const d=window._askData;
+  if(!d||!d.r||d.r.error){alert('请先进行场景解答');return null;}
+  const a=d.r.answer||{}, scene=d.q||'';
+  let h='<h2 style="margin-top:0">财税业务场景解答</h2>'
+    +'<p style="color:#888">场景：'+esc(scene)+'</p>';
+  // ① AI / 系统具体方案（首要内容）
+  const planHtml=askPlanExportHtml(a,d.r);
+  if(planHtml) h+=planHtml;
+  // ② 政策依据与综合建议
+  if(a.lead){
+    h+='<div class="panel" style="margin-bottom:14px"><h3>政策依据与综合建议'
+      +(d.r.keywords&&d.r.keywords.length?' <span class="cnt">'+d.r.keywords.length+' 个关键词</span>':'')
+      +'</h3>'
+      +'<div style="font-size:13.5px;line-height:1.9;color:#1a1a1a">'+esc(a.lead)+'</div>';
+    if(a.points&&a.points.length){
+      h+='<ol style="margin:10px 0 0 18px;font-size:13.3px;line-height:1.95;color:#444">'
+        +a.points.map(pt=>'<li style="margin-bottom:9px"><b>'+esc(pt.title)+'</b>'
+          +(pt.doc_num?' <span class="dn">'+esc(pt.doc_num)+'</span>':'')
+          +(pt.status?stTag(pt.status,pt.st_src,''):'')
+          +(pt.key_points&&pt.key_points.length?'<br><span style="color:#666">要点：</span>'+pt.key_points.map(esc).join('；'):'')
+          +(pt.excerpt?'<br><span style="color:#666">依据：</span>'+esc(pt.excerpt):'')
+          +'</li>').join('')+'</ol>';
+    }
+    if(a.note) h+='<div class="callout '+(a.note_type||'warn')+'" style="margin-top:11px">'+esc(a.note)+'</div>';
+    h+='</div>';
+  }else if(!planHtml){
+    h+='<div class="callout">本次解答无内容可导出。</div>';
+  }
+  return h;
+}
+function exportWord(){
+  const body=_kbExportHtml(); if(body==null)return;
+  const doc='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">'
+    +'<head><meta charset="utf-8"><title>财税场景解答</title><style>'+_KB_CSS+'</style></head><body>'
+    +body+'</body></html>';
+  const blob=new Blob(['﻿'+doc],{type:'application/msword'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='财税场景解答_'+new Date().toISOString().slice(0,10)+'.doc';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function exportPdf(){
+  const body=_kbExportHtml(); if(body==null)return;
+  const html='<html><head><meta charset="utf-8"><title>财税场景解答</title><style>'+_KB_CSS+'@page{margin:16mm}</style></head><body>'
+    +body+'</body></html>';
+  const f=document.createElement('iframe');
+  f.style.position='fixed';f.style.right='0';f.style.bottom='0';f.style.width='0';f.style.height='0';f.style.border='0';
+  document.body.appendChild(f);
+  const fw=f.contentWindow;
+  fw.document.open(); fw.document.write(html); fw.document.close();
+  const close=()=>setTimeout(()=>f.remove(),1500);
+  f.onload=()=>{ try{fw.focus();fw.print();}catch(e){} close(); };
+  setTimeout(()=>{ try{fw.focus();fw.print();}catch(e){} close(); },600);
+}
+
+/* ---------- drawer ---------- */
+async function openD(id){
+  $('#mask').classList.add('on'); $('#drawer').classList.add('on');
+  $('#d-title').textContent='加载中…';
+  ['read','lineage','full','official'].forEach(k=>$('#p-'+k).innerHTML='');
+  switchPane('read');
+  const d=await (await fetch('/api/policy?id='+encodeURIComponent(id))).json();
+  if(d.error){$('#d-title').textContent='未找到该政策';return}
+  $('#d-title').textContent=d.title;
+  renderRead(d); renderLineage(d); renderFull(d); renderOfficial(d);
+}
+function closeD(){$('#mask').classList.remove('on');$('#drawer').classList.remove('on')}
+function switchPane(p){
+  $$('.dnav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
+  $$('.dpane').forEach(e=>e.classList.toggle('on',e.id==='p-'+p));
+}
+$$('.dnav button').forEach(b=>b.onclick=()=>switchPane(b.dataset.p));
+document.onkeydown=e=>{if(e.key==='Escape')closeD()};
+
+function renderRead(d){
+  const a=d.analysis||{};
+  const risk=a.risk||'', rc=risk==='高'?'danger':(risk==='中'?'warn':'');
+  let h='';
+  h+=`<div class="infogrid">
+    ${info('文号',d.doc_num||'—')}${info('成文日期',d.cwrq||'—')}
+    ${info('发文机关',d.pub_name||'—')}${info('效力级次',d.level||'—')}
+    ${info('源站时效',d.aging||'未标注')}${info('生效日期',a.eff||'—')}
+    ${a.exp?info('执行截止',a.exp):''}${d.abolish_date?info('废止日期',d.abolish_date):''}
+  </div>`;
+  // 效力结论单独置顶：这是财税人员最先要看的信息
+  if(a.status){
+    const off = a.st_src==='官方标注';
+    h+=`<div class="sec"><div class="lbl">当前效力结论</div>
+      <div class="tags" style="margin-top:0">${stTag(a.status,a.st_src,a.st_ev)}
+        <span class="tag ${off?'ok':'muted'}">${off?'依据源站官方标注':'系统推断（非官方）'}</span></div>
+      <div class="st-note"><b>判定依据：</b>${esc(a.st_ev||'—')}
+      ${off?'':'<br><b>提示：</b>该结论由本系统据全库废止关系自动推定，回测准确率约 98%，'
+            +'用于重大事项前请点「政策沿革」核对原文。'}</div></div>`;
+  }
+  if(risk) h+=`<div class="sec"><div class="callout ${rc}">
+    <b>关注度：${risk}</b> — ${esc(a.risk_reason||'')}
+    ${a.retro?'<br><b>提示：</b>本文含追溯适用条款，需回溯检查以前期间的处理。':''}
+  </div></div>`;
+  if(a.summary) h+=sec('要点速览',`<div style="font-size:13.5px;line-height:1.8;color:var(--text2)">${esc(a.summary)}</div>`);
+  const tags=[...(a.taxes||[]).map(t=>`<span class="tag tax">${esc(t)}</span>`),
+              ...(a.domains||[]).map(t=>`<span class="tag">${esc(t)}</span>`)].join('');
+  if(tags) h+=sec('分类标签',`<div class="tags">${tags}</div>`);
+  if((a.key_points||[]).length) h+=sec('核心条款要点',`<ul>${a.key_points.map(p=>`<li>${esc(p)}</li>`).join('')}</ul>`);
+  if((a.obligations||[]).length) h+=sec('纳税人义务与办税动作',`<ul>${a.obligations.map(p=>`<li>${esc(p)}</li>`).join('')}</ul>`);
+  if((a.amounts||[]).length) h+=sec('税率·金额·比例要素',`<div class="amt">${a.amounts.map(x=>`<span>${esc(x)}</span>`).join('')}</div>`);
+  if((a.abolished||[]).length) h+=sec('本文废止／替代的旧文件',
+    `<div class="callout danger">${a.abolished.map(esc).join('　·　')}</div>
+     <div style="font-size:12.5px;color:var(--text3);margin-top:7px">详见「政策沿革」页签</div>`);
+  if(a.ai_summary){
+    h+=sec('AI 深度解读',`<div class="callout">${esc(a.ai_summary)}</div>`);
+    if(a.ai_impact) h+=sec('影响分析',`<div style="font-size:13.3px;line-height:1.85;color:var(--text2);white-space:pre-wrap">${esc(a.ai_impact)}</div>`);
+    if(a.ai_action) h+=sec('应对建议',`<div class="callout warn" style="white-space:pre-wrap">${esc(a.ai_action)}</div>`);
+    h+=`<div style="font-size:11.5px;color:var(--text3);text-align:right">AI 解读生成于 ${esc(a.ai_at||'')}</div>`;
+  }
+  h+=`<div style="margin-top:22px;padding-top:14px;border-top:1px solid var(--line2);font-size:12.5px;color:var(--text3)">
+      自动解读由规则引擎生成，仅供参考，实际适用以政策原文及主管税务机关口径为准。
+      ${d.url?`<a href="${esc(d.url)}" target="_blank" style="margin-left:8px">查看税务总局原文 ↗</a>`:''}</div>`;
+  $('#p-read').innerHTML=h;
+}
+const info=(k,v)=>`<div class="info"><div class="k">${k}</div><div class="v">${esc(v)}</div></div>`;
+const sec=(t,b)=>`<div class="sec"><h4>${t}</h4>${b}</div>`;
+
+const RTNAME={abolish:'废止',supersede:'替代',revise:'修订',cite:'引用'};
+function renderLineage(d){
+  let h='';
+  const out=d.outgoing||[], inc=d.incoming||[];
+  const key=out.filter(x=>x.type!=='cite'), cite=out.filter(x=>x.type==='cite');
+  if(inc.length){
+    const kills=inc.filter(x=>x.type!=='cite');
+    h+=sec(`后续文件对本文的处理（${inc.length}）`,
+      (kills.length?`<div class="callout danger" style="margin-bottom:9px">
+        本文已被 ${kills.length} 件后续文件废止或修订，引用前请务必核对最新口径。</div>`:'')+
+      inc.map(x=>relHTML(x,true)).join(''));
+  }
+  if(key.length) h+=sec(`本文废止／修订的旧文件（${key.length}）`,key.map(x=>relHTML(x)).join(''));
+  if(cite.length) h+=sec(`本文引用的其他文件（${cite.length}）`,cite.map(x=>relHTML(x)).join(''));
+  if(d.related_names) h+=sec('源站标注的关联文件',`<div class="callout">${esc(d.related_names)}</div>`);
+  if(!h) h='<div class="empty">未识别到该政策与其他文件的沿革关系</div>';
+  if((d.changes||[]).length){
+    h+=sec('本库变更记录',`<ul>${d.changes.map(c=>
+      `<li><span class="ct ct-${c.type}">${({new:'新增入库',abolish:'废止',aging:'时效变更',content:'内容修订',meta:'信息变更'})[c.type]||c.type}</span>
+       ${c.field?esc(c.field)+'：':''}${c.old?esc(c.old)+' → ':''}${esc(c.new||'')}
+       <span style="color:var(--text3);font-size:12px;margin-left:6px">${esc(c.at||'')}</span></li>`).join('')}</ul>`);
+  }
+  $('#p-lineage').innerHTML=h;
+}
+function relHTML(x,isIn){
+  const clickable=x.id?'clickable':'';
+  const onclick=x.id?`onclick="openD('${x.id}')"`:'';
+  return `<div class="rel ${clickable}" ${onclick}>
+    <div><span class="rt rt-${x.type}">${RTNAME[x.type]||x.type}</span>
+      <span class="rnum">${esc(x.doc_num||'')}</span>
+      ${x.aging?agTag(x.aging):''}</div>
+    ${x.title?`<div class="rtitle" style="margin-top:5px">${esc(x.title)}${x.cwrq?`　<span style="color:var(--text3);font-size:12px">${x.cwrq}</span>`:''}</div>`:
+      '<div class="rtitle" style="margin-top:5px;color:var(--text3);font-size:12.5px">该文号未收录于本库（可能为其他部门文件或早期文件）</div>'}
+    ${x.evidence?`<div class="rev">${esc(x.evidence)}</div>`:''}
+  </div>`;
+}
+function renderFull(d){
+  let h='';
+  if((d.appendix||[]).length) h+=sec('附件',`<div class="appx">${d.appendix.map(a=>
+    `<a href="${esc(a.url)}" target="_blank">${esc(a.name)} ↗</a>`).join('')}</div>`);
+  h+=`<div class="fulltext">${esc(d.content||'（暂无正文）')}</div>`;
+  $('#p-full').innerHTML=h;
+}
+function renderOfficial(d){
+  const it=d.interps||[];
+  if(!it.length){$('#p-official').innerHTML=
+    '<div class="empty">税务总局未针对该政策发布官方解读<br><span style="font-size:12.5px">可查看「智能解读」页签的自动分析</span></div>';return}
+  $('#p-official').innerHTML=it.map(x=>
+    `<div class="sec"><h4>${esc(x.title)}</h4>
+     <div style="font-size:12.5px;color:var(--text3);margin-bottom:8px">${esc(x.pub_date||'')}
+     ${x.url?`　<a href="${esc(x.url)}" target="_blank">原文 ↗</a>`:''}</div>
+     <div class="fulltext">${esc(x.content||'')}</div></div>`).join('');
+}
+
+/* ---------- changes ---------- */
+async function loadChanges(){
+  $('#clist').innerHTML='<div class="loading">加载中…</div>';
+  const p=new URLSearchParams({days:$('#c-days').value,type:$('#c-type').value,limit:200});
+  const r=await (await fetch('/api/changes?'+p)).json();
+  $('#cbar').innerHTML=`共 <b>${num(r.items.length)}</b> 条变更记录`;
+  if(!r.items.length){$('#clist').innerHTML='<div class="empty">所选时间范围内暂无真实政策变更。<br><span style="color:var(--text3)">每日 07:00 自动巡检，检测到新增/废止/修订后会在此列出。</span></div>';return}
+  const NM={new:'新增入库',abolish:'废止',aging:'时效变更',content:'内容修订',meta:'信息变更'};
+  $('#clist').innerHTML=r.items.map(x=>`<div class="card" onclick="openD('${x.id}')">
+    <div style="margin-bottom:5px"><span class="ct ct-${x.type}">${NM[x.type]||x.type}</span>
+      <span style="font-size:12px;color:var(--text3)">${esc(x.at||'')}</span></div>
+    <h3>${esc(x.title)}</h3>
+    <div class="meta">${x.doc_num?`<span class="dn">${esc(x.doc_num)}</span>`:''}
+      <span>${x.cwrq||''}</span>${x.level?`<span>${esc(x.level)}</span>`:''}</div>
+    ${x.field&&x.type!=='new'?`<div class="sum" style="color:var(--warn)">${esc(x.field)}：${esc(x.old||'')} → <b>${esc(x.new||'')}</b></div>`:
+      (x.summary?`<div class="sum">${esc(x.summary)}</div>`:'')}
+    <div class="tags">${x.risk?`<span class="tag risk-${x.risk}">关注度 ${x.risk}</span>`:''}
+      ${(x.taxes||[]).slice(0,3).map(t=>`<span class="tag tax">${esc(t)}</span>`).join('')}</div>
+  </div>`).join('');
+}
+$('#c-days').onchange=loadChanges; $('#c-type').onchange=loadChanges;
+
+/* ---------- watch ---------- */
+async function loadWatch(){
+  const r=await (await fetch('/api/watch')).json();
+  $('#n-exp').textContent=r.expiring.length; $('#n-pend').textContent=r.pending.length;
+  $('#expList').innerHTML=r.expiring.length?r.expiring.map(x=>
+    `<div class="mini" onclick="openD('${x.id}')"><div class="mt">${esc(x.title)}</div>
+     <div class="mm"><span style="color:var(--danger);font-weight:600">执行至 ${esc(x.exp)}</span>
+     　${esc(x.doc_num||'')}　${(x.taxes||[]).join('·')}</div></div>`).join('')
+    :'<div class="empty" style="padding:30px">未来 180 天内无到期政策</div>';
+  $('#pendList').innerHTML=r.pending.length?r.pending.map(x=>
+    `<div class="mini" onclick="openD('${x.id}')"><div class="mt">${esc(x.title)}</div>
+     <div class="mm"><span style="color:var(--warn);font-weight:600">${x.eff?'生效 '+esc(x.eff):'待生效'}</span>
+     　${esc(x.doc_num||'')}　成文 ${esc(x.cwrq||'')}</div></div>`).join('')
+    :'<div class="empty" style="padding:30px">暂无尚未生效的政策</div>';
+}
+
+/* ---------- overview ---------- */
+function drawOverview(s){
+  const ys=(s.by_year||[]).filter(x=>+x.y>=1990);
+  const mx=Math.max(...ys.map(x=>x.n),1);
+  $('#yearBars').innerHTML=ys.map(x=>
+    `<div class="bar" style="height:${Math.max(2,x.n/mx*100)}%" data-t="${x.y}年 ${x.n}件"></div>`).join('');
+  if(ys.length) $('#yearAxis').innerHTML=`<span>${ys[0].y}</span><span>${ys[Math.floor(ys.length/2)].y}</span><span>${ys[ys.length-1].y}</span>`;
+  const tot=s.total||1;
+  const rows=[['全文有效',s.valid,'var(--ok)'],['部分失效',s.partial,'var(--warn)'],
+              ['已废止',s.abolished,'var(--danger)'],['尚未生效',s.pending,'var(--warn)'],
+              ['未标注',Math.max(0,tot-s.valid-s.partial-s.abolished-s.pending),'var(--text3)']];
+  $('#agingDist').innerHTML=rows.map(([k,v,c])=>`
+    <div style="margin-bottom:11px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+        <span>${k}</span><span style="color:${c};font-weight:600">${num(v)} · ${(v/tot*100).toFixed(1)}%</span></div>
+      <div style="height:7px;background:var(--gray-bg);border-radius:4px;overflow:hidden">
+        <div style="height:100%;width:${v/tot*100}%;background:${c};border-radius:4px"></div></div>
+    </div>`).join('');
+}
+
+/* ---------- nav ---------- */
+$$('nav button').forEach(b=>b.onclick=()=>{
+  $$('nav button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  const t=b.dataset.tab;
+  $$('.tab').forEach(s=>s.classList.toggle('on',s.id==='tab-'+t));
+  if(t==='changes')loadChanges(); if(t==='watch')loadWatch(); if(t==='kb')loadKb(true);
+});
+$('#q').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch(1)});
+$('#ask-q').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();doAsk()}});
+['#f-tax','#f-domain','#f-level','#f-status','#f-aging','#f-year','#f-risk','#f-sort']
+  .forEach(i=>$(i).addEventListener('change',()=>doSearch(1)));
+init();
+</script>
+</body>
+</html>
