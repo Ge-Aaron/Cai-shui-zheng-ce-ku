@@ -17,3 +17,7 @@ start.bat
 ask200.json
 postq.py
 nssm.zip
+cloudflared.exe
+tunnel.log
+start_tunnel.bat
+start_ssh_tunnel.bat
