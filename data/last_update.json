@@ -1,10 +1,10 @@
 {
-  "finished_at": "2026-08-07 17:32:13",
+  "finished_at": "2026-08-11 09:11:48",
   "mode": "incr",
   "crawl_rc": 0,
   "analyze_rc": 0,
   "embed_rc": 0,
-  "reload_note": "已刷新：{'ok': True, 'vectors': 5004, 'reloaded_at': '2026-08-07 17:32:13'}",
+  "reload_note": "已刷新：{'ok': True, 'vectors': 5004, 'reloaded_at': '2026-08-11 09:11:48'}",
   "ok": true,
   "summary": "近24小时变更记录 0 条\n全库效力分布 → 现行在用(含推定) 1038 / 已废止·失效 944 / 已修改 406 / 未见废止记录 2401 / 将废止 1 / 尚未生效 6"
 }

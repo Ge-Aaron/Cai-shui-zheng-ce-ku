@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul 2>&1
 cd /d "%~dp0"
 
 echo.
@@ -6,23 +7,33 @@ echo   ===========================================
 echo    taxdb - push code to GitHub
 echo   ===========================================
 echo.
-echo   Before running, create an EMPTY repository on GitHub.
-echo   Do NOT check "Add a README file" or ".gitignore".
-echo   Example URL: https://github.com/yourname/taxdb.git
-echo.
-set /p REPO_URL="Paste your GitHub repository URL: "
 
-if "%REPO_URL%"=="" (
-    echo [ERROR] No URL entered. Exiting.
-    pause
-    exit /b 1
+REM Repository URL is baked in. Edit the next line to change target repo.
+set "REPO_URL=https://github.com/Ge-Aaron/Cai-shui-zheng-ce-ku.git"
+echo   Target repository: %REPO_URL%
+echo.
+
+if not exist ".git" (
+    echo   [init] No .git found, initializing and linking remote...
+    git init -b master >nul 2>&1
 )
 
 git remote remove origin >nul 2>&1
 git remote add origin %REPO_URL%
 
-echo.
-echo   [1/1] Pushing code to GitHub (master branch)...
+echo   [sync] Fetching remote history...
+git fetch origin >nul 2>&1
+git merge origin/master --allow-unrelated-histories -m "sync with remote" --no-edit >nul 2>&1
+
+echo   [stage] Adding changes (respecting .gitignore)...
+git add -A
+
+git diff --cached --quiet >nul 2>&1
+if errorlevel 1 (
+    git commit -m "update: %date% %time%"
+)
+
+echo   [push] Pushing to GitHub (master)...
 echo   If a browser login pops up, authorize with GitHub.
 echo.
 git push -u origin master
@@ -31,9 +42,9 @@ if errorlevel 1 (
     echo.
     echo   [FAILED] Push did not succeed.
     echo   Common reasons:
-    echo     1) Wrong repository URL / repository is not empty
-    echo     2) Not logged in to GitHub
-    echo     3) Network problem
+    echo     1^) Not logged in to GitHub (browser did not pop up / was cancelled)
+    echo     2^) Network problem
+    echo     3^) Diverged history - run manually: git pull origin master
     echo.
     echo   Fix the issue and run this file again.
     pause
@@ -43,9 +54,7 @@ if errorlevel 1 (
 echo.
 echo   [OK] Code pushed successfully.
 echo.
-echo   Next steps (see DEPLOY.md for details):
-echo     1) Upload data/tax_policy.db (~156MB) to a GitHub Release.
-echo     2) Open https://render.com, connect this repository,
-echo        set env vars TAXDB_LLM_KEY and TAXDB_DB_URL, then Deploy.
+echo   Render will auto-redeploy if Auto-Deploy is enabled.
+echo   Otherwise: Render dashboard - Manual Deploy - Deploy latest commit.
 echo.
 pause

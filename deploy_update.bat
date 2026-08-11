@@ -1,19 +1,20 @@
 @echo off
+chcp 65001 >nul 2>&1
 cd /d "%~dp0"
 
 echo.
 echo   ===========================================
-echo    taxdb - 一键更新发布
-echo    重新生成数据库 + 上传 Release + 触发部署
+echo    taxdb - deploy update
+echo    rebuild db + upload Release + trigger deploy
 echo   ===========================================
 echo.
 
-REM 优先用本项目 venv 解释器；找不到则退回系统 python
-set PY="C:\Users\Administrator\.workbuddy\binaries\python\envs\default\Scripts\python.exe"
-if not exist %PY% set PY=python
+REM prefer project venv python; fall back to system python
+set "PY=C:\Users\Administrator\.workbuddy\binaries\python\envs\default\Scripts\python.exe"
+if not exist "%PY%" set PY=python
 
-%PY% scripts/deploy_update.py
+"%PY%" scripts\deploy_update.py
 
 echo.
-echo   按任意键关闭窗口...
+echo   Press any key to close...
 pause >nul
