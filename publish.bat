@@ -37,10 +37,11 @@ echo   [push] Pushing to GitHub (master)...
 echo   If a browser login pops up, authorize with GitHub.
 echo.
 git push -u origin master
+set "PUSH_RC=%errorlevel%"
 
-if errorlevel 1 (
+if "%PUSH_RC%" neq "0" (
     echo.
-    echo   [FAILED] Push did not succeed.
+    echo   [FAILED] Push did not succeed ^(exit code %PUSH_RC%^).
     echo   Common reasons:
     echo     1^) Not logged in to GitHub (browser did not pop up / was cancelled)
     echo     2^) Network problem
