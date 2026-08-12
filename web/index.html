@@ -1001,38 +1001,81 @@ function renderOfficial(d){
      <div class="fulltext">${esc(x.content||'')}</div></div>`).join('');
 }
 
-/* ---------- 电商政策（多条件筛选，与政策检索对齐） ---------- */
-const EC={page:1,kw:''};
-async function ecSearch(page){
-  EC.page=page||1;
+/* ---------- 电商政策（多条件筛选 + 板块 + 两板块独立分页） ---------- */
+const EC={cat:'',cpage:1,dpage:1,kw:''};
+// reset 传 false 表示只翻页、不重置页码；其余（含旧的 ecSearch(1) 调用）都回到第 1 页
+async function ecSearch(reset){
+  if(reset!==false){EC.cpage=1;EC.dpage=1;}
   const kw=$('#ec-q').value.trim(); EC.kw=kw;
+  const size=parseInt($('#ec-size').value,10)||10;
   const p=new URLSearchParams({q:kw,tax:$('#ec-tax').value,domain:$('#ec-domain').value,
     level:$('#ec-level').value,status:$('#ec-status').value,aging:$('#ec-aging').value,year:$('#ec-year').value,
-    risk:$('#ec-risk').value,sort:$('#ec-sort').value,page:EC.page,size:300});
-  $('#ec-cross').innerHTML='<div class="loading">检索中…</div>';
-  $('#ec-dom').innerHTML='<div class="loading">检索中…</div>';
+    risk:$('#ec-risk').value,sort:$('#ec-sort').value,
+    cat:EC.cat,size:size,cpage:EC.cpage,dpage:EC.dpage});
+  // 按板块决定显示哪些面板
+  $('#ec-panel-cross').style.display = EC.cat==='domestic' ? 'none' : '';
+  $('#ec-panel-dom').style.display   = EC.cat==='cross'    ? 'none' : '';
+  if(EC.cat!=='domestic') $('#ec-cross').innerHTML='<div class="loading">检索中…</div>';
+  if(EC.cat!=='cross')    $('#ec-dom').innerHTML='<div class="loading">检索中…</div>';
   try{
     const r=await safeJSON('/api/ecommerce?'+p);
-    $('#ec-rbar').innerHTML=`共筛选到 跨境电商 <b>${num(r.cross.total)}</b> 件 / 国内电商 <b>${num(r.domestic.total)}</b> 件${kw?`（关键词：${esc(kw)}）`:''}`;
+    EC.size=r.size||size; EC.cpage=r.cross.page||EC.cpage; EC.dpage=r.domestic.page||EC.dpage;
+    const catName={'':'','cross':'跨境电商','domestic':'国内电商'}[EC.cat];
+    $('#ec-rbar').innerHTML = (EC.cat===''
+        ? `共筛选到 跨境电商 <b>${num(r.cross.total)}</b> 件 / 国内电商 <b>${num(r.domestic.total)}</b> 件`
+        : `板块「<b>${catName}</b>」共筛选到 <b>${num(EC.cat==='cross'?r.cross.total:r.domestic.total)}</b> 件`)
+      + (kw?`（关键词：${esc(kw)}）`:'') + `　<span style="color:var(--text3);font-size:12.5px">每页 ${EC.size} 条</span>`;
     const prevKW=ST.kw; ST.kw=kw;   // 用电商关键词做卡片高亮
     $('#ec-cross-n').textContent=r.cross.total;
     $('#ec-dom-n').textContent=r.domestic.total;
-    $('#ec-cross').innerHTML = r.cross.items.length
-      ? r.cross.items.map(cardHTML).join('')
-      : '<div class="empty">未找到匹配的跨境电商政策，试试调整筛选条件</div>';
-    $('#ec-dom').innerHTML = r.domestic.items.length
-      ? r.domestic.items.map(cardHTML).join('')
-      : '<div class="empty">未找到匹配的国内电商政策，试试调整筛选条件</div>';
+    if(EC.cat!=='domestic'){
+      $('#ec-cross').innerHTML = r.cross.items.length
+        ? r.cross.items.map(cardHTML).join('')
+        : '<div class="empty">未找到匹配的跨境电商政策，试试调整筛选条件</div>';
+      ecPager('#ec-cross-pager',r.cross.total,EC.cpage,'ecGoCross');
+    }
+    if(EC.cat!=='cross'){
+      $('#ec-dom').innerHTML = r.domestic.items.length
+        ? r.domestic.items.map(cardHTML).join('')
+        : '<div class="empty">未找到匹配的国内电商政策，试试调整筛选条件</div>';
+      ecPager('#ec-dom-pager',r.domestic.total,EC.dpage,'ecGoDom');
+    }
     ST.kw=prevKW;
   }catch(e){
     console.error(e);
     $('#ec-cross').innerHTML=`<div class="empty" style="color:var(--danger)">加载出错：${esc(e.message||e)}<br>请按 F12 打开控制台查看详情并刷新重试</div>`;
-    $('#ec-dom').innerHTML='';
+    $('#ec-dom').innerHTML=''; $('#ec-cross-pager').innerHTML=''; $('#ec-dom-pager').innerHTML='';
   }
 }
+// 板块切换（chip 单选）
+function ecCat(el){
+  $$('#ec-cats .chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on'); EC.cat=el.dataset.cat||''; ecSearch(1);
+}
+// 分页器：与政策检索同款样式，首尾页 + 当前页附近页码
+function ecPager(sel,total,page,goFn){
+  const size=EC.size||parseInt($('#ec-size').value,10)||10;
+  const tp=Math.ceil(total/size), el=$(sel);
+  if(!el)return;
+  if(tp<=1){el.innerHTML='';return}
+  let h=`<button ${page<=1?'disabled':''} onclick="${goFn}(${page-1})">上一页</button>`;
+  const s=new Set([1,tp,page,page-1,page+1,page-2,page+2]);
+  const ps=[...s].filter(i=>i>=1&&i<=tp).sort((a,b)=>a-b);
+  let last=0;
+  ps.forEach(i=>{if(last&&i-last>1)h+='<span style="color:var(--text3)">…</span>';
+    h+=`<button class="${i===page?'cur':''}" onclick="${goFn}(${i})">${i}</button>`;last=i});
+  h+=`<button ${page>=tp?'disabled':''} onclick="${goFn}(${page+1})">下一页</button>
+      <span style="color:var(--text3);font-size:12.5px;margin-left:6px">第 ${page} / ${tp} 页</span>`;
+  el.innerHTML=h;
+}
+async function ecGoCross(p){EC.cpage=Math.max(1,p); await ecSearch(false); ecTop('#ec-panel-cross');}
+async function ecGoDom(p){EC.dpage=Math.max(1,p); await ecSearch(false); ecTop('#ec-panel-dom');}
+function ecTop(sel){const el=$(sel); if(el)window.scrollTo({top:el.offsetTop-70,behavior:'smooth'});}
 function ecReset(){
   $('#ec-q').value='';['#ec-tax','#ec-domain','#ec-level','#ec-status','#ec-aging','#ec-year','#ec-risk'].forEach(i=>$(i).value='');
-  $('#ec-sort').value='date'; ecSearch(1);
+  $('#ec-sort').value='date'; $('#ec-size').value='10';
+  EC.cat=''; $$('#ec-cats .chip').forEach(c=>c.classList.toggle('on',!c.dataset.cat));
+  ecSearch(1);
 }
 function loadEcom(){ ecSearch(1); }
 
@@ -1105,7 +1148,7 @@ $('#q').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch(1)});
 $('#ask-q').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();doAsk()}});
 ['#f-tax','#f-domain','#f-level','#f-status','#f-aging','#f-year','#f-risk','#f-sort']
   .forEach(i=>$(i).addEventListener('change',()=>doSearch(1)));
-['#ec-tax','#ec-domain','#ec-level','#ec-status','#ec-aging','#ec-year','#ec-risk','#ec-sort']
+['#ec-tax','#ec-domain','#ec-level','#ec-status','#ec-aging','#ec-year','#ec-risk','#ec-sort','#ec-size']
   .forEach(i=>$(i).addEventListener('change',()=>ecSearch(1)));
 $('#ec-q').addEventListener('keydown',e=>{if(e.key==='Enter')ecSearch(1)});
 init();
