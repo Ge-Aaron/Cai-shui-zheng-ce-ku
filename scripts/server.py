@@ -270,6 +270,166 @@ def api_search(p):
     return {"total": total, "page": page, "size": size, "items": items}
 
 
+# ---------------------------------------------------------------------------
+# 电商相关政策：从全量政策库筛选「跨境电商」与「国内电商」两类
+# 说明：库内无现成的电商分类标签，本接口依据标题/正文中的电商相关表述做关键词判定。
+#   - 跨境电商：含「跨境电子商务 / 跨境电商 / 跨境零售 / 综试区 / 海外仓」等跨境+电商语义
+#   - 国内电商：含「电子商务 / 网络零售 / 直播带货」等表述且不属于跨境电商
+# ---------------------------------------------------------------------------
+ECROSS_KW = ["跨境电子商务", "跨境电商", "跨境零售", "跨境贸易电子商务",
+             "跨境电子商务综合试验区", "海外仓"]
+EDOMESTIC_KW = ["电子商务", "网络零售", "网上零售", "网络直播营销", "直播带货"]
+
+_EC_SELECT = ("p.id,p.title,p.doc_num,p.cwrq,p.pub_name,p.effect_level,p.aging,"
+              "p.url,p.doc_year,p.clicknum,"
+              "a.summary,a.tax_types_x,a.domains,a.risk_level,a.effective_date,"
+              "a.expire_date,a.abolished_docs,"
+              "a.status_final,a.status_source,a.status_evidence")
+
+
+def _ec_kw_where(kws):
+    """生成 (标题 LIKE ? OR 正文 LIKE ?) 的 OR 组合 WHERE 片段与参数。"""
+    parts, args = [], []
+    for k in kws:
+        parts.append("(p.title LIKE ? OR p.content LIKE ?)")
+        args += [f"%{k}%", f"%{k}%"]
+    return "(" + " OR ".join(parts) + ")", args
+
+
+def _ec_rows_to_items(rows):
+    items = []
+    for r in rows:
+        items.append({
+            "id": r["id"], "title": r["title"], "doc_num": r["doc_num"],
+            "cwrq": r["cwrq"], "pub_name": r["pub_name"],
+            "level": r["effect_level"], "aging": r["aging"], "url": r["url"],
+            "year": r["doc_year"], "clicks": r["clicknum"],
+            "summary": r["summary"] or "", "taxes": jload(r["tax_types_x"], []),
+            "domains": jload(r["domains"], []), "risk": r["risk_level"] or "",
+            "eff": r["effective_date"] or "", "exp": r["expire_date"] or "",
+            "abolished_n": len(jload(r["abolished_docs"], [])),
+            "status": r["status_final"] or "", "st_src": r["status_source"] or "",
+            "st_ev": r["status_evidence"] or "",
+        })
+    return items
+
+
+def api_ecommerce(p):
+    """电商政策：在 api_search 同款多条件筛选基础上叠加「跨境/国内电商」语义判定。
+
+    筛选参数与 api_search 对齐：q / tax / level / aging / status / year / domain /
+    risk / sort，另有电商专属参数：
+      - cat   板块：''=跨境+国内都看，'cross'=只看跨境电商，'domestic'=只看国内电商
+      - size  每页条数（两个板块共用，默认 10）
+      - cpage 跨境电商当前页；dpage 国内电商当前页（两个板块各自独立翻页）
+    返回 cross / domestic 两类，各自带 total / items / page；两类计数始终返回
+    （便于界面显示板块总量），但被 cat 隐藏的板块不再取明细数据，省一次查询。
+    """
+    q = (p.get("q", [""])[0] or "").strip()
+    tax = p.get("tax", [""])[0]
+    level = p.get("level", [""])[0]
+    aging = p.get("aging", [""])[0]
+    status = p.get("status", [""])[0]
+    year = p.get("year", [""])[0]
+    domain = p.get("domain", [""])[0]
+    risk = p.get("risk", [""])[0]
+    sort = p.get("sort", ["date"])[0]
+    cat = (p.get("cat", [""])[0] or "").strip()
+    if cat not in ("", "cross", "domestic"):
+        cat = ""
+    size = min(100, max(5, int(p.get("size", ["10"])[0] or 10)))
+    # 兼容旧参数 page：未显式给 cpage/dpage 时，用 page 作为两者初值
+    page = max(1, int(p.get("page", ["1"])[0] or 1))
+    cpage = max(1, int(p.get("cpage", [str(page)])[0] or page))
+    dpage = max(1, int(p.get("dpage", [str(page)])[0] or page))
+
+    cross_where, cross_args = _ec_kw_where(ECROSS_KW)
+    ec_where, ec_args = _ec_kw_where(EDOMESTIC_KW)
+
+    # ---- 公共筛选条件（与 api_search 对齐）----
+    where, args = [], []
+    toks = []
+    if q:
+        toks = [t for t in re.split(r"\s+", q) if t]
+        for t in toks:
+            pat = f"%{t}%"
+            where.append("(p.title LIKE ? OR p.doc_num LIKE ? OR a.summary LIKE ? OR p.content LIKE ?)")
+            args += [pat, pat, pat, pat]
+    if level:
+        where.append("p.effect_level = ?")
+        args.append(level)
+    if aging:
+        if aging == "废止":
+            where.append("p.aging LIKE '%废止%'")
+        else:
+            where.append("p.aging = ?")
+            args.append(aging)
+    if status:
+        if status == "在用":
+            where.append("a.status_final IN ('有效','推定有效')")
+        elif status == "失效":
+            where.append("a.status_final IN ('已废止','已失效','已到期')")
+        else:
+            where.append("a.status_final = ?")
+            args.append(status)
+    if year:
+        where.append("p.doc_year = ?")
+        args.append(year)
+    if tax:
+        where.append("a.tax_types_x LIKE ?")
+        args.append(f'%"{tax}"%')
+    if domain:
+        where.append("a.domains LIKE ?")
+        args.append(f'%"{domain}"%')
+    if risk:
+        where.append("a.risk_level = ?")
+        args.append(risk)
+
+    # ---- 排序（与 api_search 对齐）----
+    order_args = []
+    if q and sort == "rel" and toks:
+        first = toks[0]
+        order = ("(CASE WHEN p.title LIKE ? THEN 4 ELSE 0 END)"
+                 "+ (CASE WHEN p.doc_num LIKE ? THEN 3 ELSE 0 END)"
+                 "+ (CASE WHEN a.summary LIKE ? THEN 2 ELSE 0 END)"
+                 "+ (CASE WHEN p.content LIKE ? THEN 1 ELSE 0 END) DESC, p.cwrq DESC")
+        order_args = [f"%{first}%"] * 4
+    else:
+        order = {"date": "p.cwrq DESC, p.id DESC",
+                 "date_asc": "p.cwrq ASC",
+                 "hot": "p.clicknum DESC",
+                 "risk": "CASE a.risk_level WHEN '高' THEN 0 WHEN '中' THEN 1 ELSE 2 END, p.cwrq DESC",
+                 }.get(sort, "p.cwrq DESC")
+
+    c = conn()
+    cur = c.cursor()
+
+    def run(cat_where, cat_args, pg, fetch=True):
+        """统计该板块命中总数；fetch=False 时只数不取（板块被隐藏的情况）。"""
+        w = list(where) + [cat_where]
+        a = list(args) + list(cat_args)
+        wsql = (" WHERE " + " AND ".join(w)) if w else ""
+        base = f"FROM policies p LEFT JOIN analysis a ON a.policy_id=p.id {wsql}"
+        total = cur.execute(f"SELECT COUNT(*) {base}", a).fetchone()[0]
+        if not fetch:
+            return total, [], pg
+        # 翻页越界（如换了筛选条件后页码超出）时回落到最后一页，避免出现空白页
+        tp = max(1, -(-total // size))
+        pg = min(pg, tp)
+        rows = cur.execute(
+            f"SELECT {_EC_SELECT} {base} ORDER BY {order} LIMIT ? OFFSET ?",
+            a + order_args + [size, (pg - 1) * size]).fetchall()
+        return total, _ec_rows_to_items(rows), pg
+
+    ct, ci, cp = run(cross_where, cross_args, cpage, cat != "domestic")
+    dt, di, dp = run(f"({ec_where} AND NOT {cross_where})",
+                     ec_args + cross_args, dpage, cat != "cross")
+    c.close()
+    return {"cat": cat, "size": size,
+            "cross": {"total": ct, "items": ci, "page": cp},
+            "domestic": {"total": dt, "items": di, "page": dp}}
+
+
 def api_policy(pid):
     c = conn()
     cur = c.cursor()
@@ -980,6 +1140,8 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._json(api_facets())
             if u.path == "/api/search":
                 return self._json(api_search(p))
+            if u.path == "/api/ecommerce":
+                return self._json(api_ecommerce(p))
             if u.path == "/api/policy":
                 return self._json(api_policy(p.get("id", [""])[0]))
             if u.path == "/api/changes":

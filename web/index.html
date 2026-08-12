@@ -232,6 +232,7 @@ main{padding:18px 0 60px}
     <div class="kpis" id="kpis"></div>
     <nav>
       <button class="on" data-tab="search">政策检索</button>
+      <button data-tab="ecom">电商政策</button>
       <button data-tab="ask">场景解答</button>
       <button data-tab="changes">最新动态</button>
       <button data-tab="watch">时效预警</button>
@@ -277,6 +278,70 @@ main{padding:18px 0 60px}
     <div class="rbar" id="rbar"></div>
     <div id="list"></div>
     <div class="pager" id="pager"></div>
+  </section>
+
+  <!-- 电商政策 -->
+  <section class="tab" id="tab-ecom">
+    <div class="filters">
+      <div class="ask-tip">
+        从<b>全量政策库</b>中按关键词自动筛选出的「电商」相关财税政策，按业务形态分为
+        <b>跨境电商</b>（含跨境电子商务、海外仓、综试区等）与 <b>国内电商</b>（不含跨境属性的电商）两类。
+        可用<b>板块</b>只看其中一类，其余筛选条件（关键词 / 税种 / 领域 / 效力级次 / 状态 / 时效 / 年份 / 关注度 / 排序）
+        与「政策检索」完全一致；两个板块<b>各自独立翻页</b>，点击卡片可查看原文与智能解读。
+        筛选依据标题 / 正文中的电商相关表述，结果仅供参考。
+      </div>
+      <div class="srow">
+        <input id="ec-q" placeholder="搜索电商相关政策，如：海外仓、出口退税、直播带货、退货">
+        <button onclick="ecSearch(1)">检索</button>
+        <button class="ghost" onclick="ecReset()">重置</button>
+      </div>
+      <div class="frow" style="margin-bottom:7px">
+        <span class="lbl" style="margin-left:0">板块</span>
+        <div class="chips" id="ec-cats" style="margin-top:0">
+          <button class="chip on" data-cat="" onclick="ecCat(this)">全部（跨境+国内）</button>
+          <button class="chip" data-cat="cross" onclick="ecCat(this)">跨境电商</button>
+          <button class="chip" data-cat="domestic" onclick="ecCat(this)">国内电商</button>
+        </div>
+      </div>
+      <div class="frow">
+        <select id="ec-tax"><option value="">全部税种</option></select>
+        <select id="ec-domain"><option value="">全部领域</option></select>
+        <select id="ec-level"><option value="">全部效力级次</option></select>
+        <select id="ec-status">
+          <option value="">全部效力状态</option>
+          <option value="在用">✔ 现行在用（含推定）</option>
+          <option value="失效">✘ 已废止/失效</option>
+        </select>
+        <select id="ec-aging"><option value="">源站时效标注</option></select>
+        <select id="ec-year"><option value="">全部年份</option></select>
+        <select id="ec-risk"><option value="">全部关注度</option><option>高</option><option>中</option><option>低</option></select>
+        <span class="lbl">排序</span>
+        <select id="ec-sort">
+          <option value="date">成文日期 ↓</option>
+          <option value="rel">相关度</option>
+          <option value="risk">关注度优先</option>
+          <option value="hot">热度</option>
+          <option value="date_asc">成文日期 ↑</option>
+        </select>
+        <span class="lbl">每页</span>
+        <select id="ec-size">
+          <option value="10">10 条</option>
+          <option value="20">20 条</option>
+          <option value="50">50 条</option>
+        </select>
+      </div>
+    </div>
+    <div class="rbar" id="ec-rbar"></div>
+    <div class="panel" id="ec-panel-cross" style="margin-bottom:14px">
+      <h3>跨境电商 <span class="cnt" id="ec-cross-n">…</span></h3>
+      <div id="ec-cross"></div>
+      <div class="pager" id="ec-cross-pager"></div>
+    </div>
+    <div class="panel" id="ec-panel-dom">
+      <h3>国内电商 <span class="cnt" id="ec-dom-n">…</span></h3>
+      <div id="ec-dom"></div>
+      <div class="pager" id="ec-dom-pager"></div>
+    </div>
   </section>
 
   <!-- 场景解答 -->
@@ -446,6 +511,8 @@ async function init(){
   const fill=(id,arr)=>{const e=$(id);arr.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;e.appendChild(o)})};
   fill('#f-tax',f.taxes); fill('#f-domain',f.domains); fill('#f-level',f.levels);
   fill('#f-status',f.statuses); fill('#f-aging',f.agings); fill('#f-year',f.years);
+  fill('#ec-tax',f.taxes); fill('#ec-domain',f.domains); fill('#ec-level',f.levels);
+  fill('#ec-status',f.statuses); fill('#ec-aging',f.agings); fill('#ec-year',f.years);
   $('#quick').innerHTML=QUICK.filter(Boolean).map(k=>`<button class="chip" onclick="quick(this,'${k}')">${k}</button>`).join('');
   $('#ask-quick').innerHTML=ASK_EXAMPLES.map(k=>`<button class="chip" onclick="askEx(this)">${k}</button>`).join('');
   doSearch(1);
@@ -934,6 +1001,41 @@ function renderOfficial(d){
      <div class="fulltext">${esc(x.content||'')}</div></div>`).join('');
 }
 
+/* ---------- 电商政策（多条件筛选，与政策检索对齐） ---------- */
+const EC={page:1,kw:''};
+async function ecSearch(page){
+  EC.page=page||1;
+  const kw=$('#ec-q').value.trim(); EC.kw=kw;
+  const p=new URLSearchParams({q:kw,tax:$('#ec-tax').value,domain:$('#ec-domain').value,
+    level:$('#ec-level').value,status:$('#ec-status').value,aging:$('#ec-aging').value,year:$('#ec-year').value,
+    risk:$('#ec-risk').value,sort:$('#ec-sort').value,page:EC.page,size:300});
+  $('#ec-cross').innerHTML='<div class="loading">检索中…</div>';
+  $('#ec-dom').innerHTML='<div class="loading">检索中…</div>';
+  try{
+    const r=await safeJSON('/api/ecommerce?'+p);
+    $('#ec-rbar').innerHTML=`共筛选到 跨境电商 <b>${num(r.cross.total)}</b> 件 / 国内电商 <b>${num(r.domestic.total)}</b> 件${kw?`（关键词：${esc(kw)}）`:''}`;
+    const prevKW=ST.kw; ST.kw=kw;   // 用电商关键词做卡片高亮
+    $('#ec-cross-n').textContent=r.cross.total;
+    $('#ec-dom-n').textContent=r.domestic.total;
+    $('#ec-cross').innerHTML = r.cross.items.length
+      ? r.cross.items.map(cardHTML).join('')
+      : '<div class="empty">未找到匹配的跨境电商政策，试试调整筛选条件</div>';
+    $('#ec-dom').innerHTML = r.domestic.items.length
+      ? r.domestic.items.map(cardHTML).join('')
+      : '<div class="empty">未找到匹配的国内电商政策，试试调整筛选条件</div>';
+    ST.kw=prevKW;
+  }catch(e){
+    console.error(e);
+    $('#ec-cross').innerHTML=`<div class="empty" style="color:var(--danger)">加载出错：${esc(e.message||e)}<br>请按 F12 打开控制台查看详情并刷新重试</div>`;
+    $('#ec-dom').innerHTML='';
+  }
+}
+function ecReset(){
+  $('#ec-q').value='';['#ec-tax','#ec-domain','#ec-level','#ec-status','#ec-aging','#ec-year','#ec-risk'].forEach(i=>$(i).value='');
+  $('#ec-sort').value='date'; ecSearch(1);
+}
+function loadEcom(){ ecSearch(1); }
+
 /* ---------- changes ---------- */
 async function loadChanges(){
   $('#clist').innerHTML='<div class="loading">加载中…</div>';
@@ -997,12 +1099,15 @@ $$('nav button').forEach(b=>b.onclick=()=>{
   $$('nav button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
   const t=b.dataset.tab;
   $$('.tab').forEach(s=>s.classList.toggle('on',s.id==='tab-'+t));
-  if(t==='changes')loadChanges(); if(t==='watch')loadWatch(); if(t==='kb')loadKb(true);
+  if(t==='changes')loadChanges(); if(t==='watch')loadWatch(); if(t==='kb')loadKb(true); if(t==='ecom')loadEcom();
 });
 $('#q').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch(1)});
 $('#ask-q').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();doAsk()}});
 ['#f-tax','#f-domain','#f-level','#f-status','#f-aging','#f-year','#f-risk','#f-sort']
   .forEach(i=>$(i).addEventListener('change',()=>doSearch(1)));
+['#ec-tax','#ec-domain','#ec-level','#ec-status','#ec-aging','#ec-year','#ec-risk','#ec-sort']
+  .forEach(i=>$(i).addEventListener('change',()=>ecSearch(1)));
+$('#ec-q').addEventListener('keydown',e=>{if(e.key==='Enter')ecSearch(1)});
 init();
 </script>
 </body>
