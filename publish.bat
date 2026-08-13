@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 chcp 65001 >nul 2>&1
 cd /d "%~dp0"
 
@@ -52,10 +53,8 @@ if "%PUSH_RC%" equ "0" set "PUSH_OK=1"
 if "%PUSH_OK%" equ "0" (
     git fetch origin >nul 2>&1
     for /f "delims=" %%H in ('git rev-parse HEAD 2^>nul') do set "LOCAL_HEAD=%%H"
-    for /f "delims=" %%R in ('git ls-remote origin HEAD 2^>nul') do (
-        for /f "tokens=1" %%A in ("%%R") do (
-            if /i "%%A"=="%LOCAL_HEAD%" set "PUSH_OK=1"
-        )
+    for /f "tokens=1" %%R in ('git ls-remote origin HEAD 2^>nul') do (
+        if /i "%%R"=="!LOCAL_HEAD!" set "PUSH_OK=1"
     )
 )
 
