@@ -25,6 +25,11 @@ echo   [sync] Fetching remote history...
 git fetch origin >nul 2>&1
 git merge origin/master --allow-unrelated-histories -m "sync with remote" --no-edit >nul 2>&1
 
+REM Ensure Git has an author identity for this repo, otherwise commit fails on
+REM fresh machines / portable Git installs that have no global user.name/email.
+git config user.email "taxdb@local" >nul 2>&1
+git config user.name "taxdb" >nul 2>&1
+
 echo   [stage] Adding changes (respecting .gitignore)...
 git add -A
 
