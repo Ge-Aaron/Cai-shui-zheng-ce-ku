@@ -1,7 +1,10 @@
 @echo off
-setlocal enabledelayedexpansion
 chcp 65001 >nul 2>&1
 cd /d "%~dp0"
+
+REM Locate Python: prefer WorkBuddy managed env, fallback to PATH.
+set "PYTHON=%USERPROFILE%\.workbuddy\binaries\python\envs\default\Scripts\python.exe"
+if not exist "%PYTHON%" set "PYTHON=python"
 
 echo.
 echo   ===========================================
@@ -42,37 +45,13 @@ if errorlevel 1 (
 echo   [push] Pushing to GitHub (master)...
 echo   If a browser login pops up, authorize with GitHub.
 echo.
-git push -u origin master
-set "PUSH_RC=%errorlevel%"
-
-REM Some credential helpers / Git versions return a non-zero exit code even when
-REM objects were written successfully. Double-check by fetching the remote HEAD
-REM and comparing it with the local HEAD.
-set "PUSH_OK=0"
-if "%PUSH_RC%" equ "0" set "PUSH_OK=1"
-if "%PUSH_OK%" equ "0" (
-    git fetch origin >nul 2>&1
-    for /f "delims=" %%H in ('git rev-parse HEAD 2^>nul') do set "LOCAL_HEAD=%%H"
-    for /f "tokens=1" %%R in ('git ls-remote origin HEAD 2^>nul') do (
-        if /i "%%R"=="!LOCAL_HEAD!" set "PUSH_OK=1"
-    )
-)
-
-if "%PUSH_OK%" equ "0" (
-    echo.
-    echo   [FAILED] Push did not succeed ^(exit code %PUSH_RC%^).
-    echo   Common reasons:
-    echo     1^) Not logged in to GitHub (browser did not pop up / was cancelled)
-    echo     2^) Network problem
-    echo     3^) Diverged history - run manually: git pull origin master
-    echo.
-    echo   Fix the issue and run this file again.
+"%PYTHON%" "%~dp0scripts\push_helper.py"
+if errorlevel 1 (
     pause
     exit /b 1
 )
 
 echo.
-echo   [OK] Code pushed successfully.
 echo.
 echo   Render will auto-redeploy if Auto-Deploy is enabled.
 echo   Otherwise: Render dashboard - Manual Deploy - Deploy latest commit.
