@@ -286,9 +286,9 @@ main{padding:18px 0 60px}
       <div class="ask-tip">
         从<b>全量政策库</b>中按关键词自动筛选出的「电商」相关财税政策，按业务形态分为
         <b>跨境电商</b>（含跨境电子商务、海外仓、综试区等）与 <b>国内电商</b>（不含跨境属性的电商）两类。
-        可用<b>板块</b>只看其中一类，其余筛选条件（关键词 / 税种 / 领域 / 效力级次 / 状态 / 时效 / 年份 / 关注度 / 排序）
-        与「政策检索」完全一致；两个板块<b>各自独立翻页</b>，点击卡片可查看原文与智能解读。
-        筛选依据标题 / 正文中的电商相关表述，结果仅供参考。
+        未选择板块时<b>合并展示全部电商政策</b>，点击「跨境电商 / 国内电商」按钮后再按类别过滤；
+        其余筛选条件（关键词 / 税种 / 领域 / 效力级次 / 状态 / 时效 / 年份 / 关注度 / 排序 / 每页条数）
+        与「政策检索」完全一致，点击卡片可查看原文与智能解读。筛选依据标题 / 正文中的电商相关表述，结果仅供参考。
       </div>
       <div class="srow">
         <input id="ec-q" placeholder="搜索电商相关政策，如：海外仓、出口退税、直播带货、退货">
@@ -332,15 +332,10 @@ main{padding:18px 0 60px}
       </div>
     </div>
     <div class="rbar" id="ec-rbar"></div>
-    <div class="panel" id="ec-panel-cross" style="margin-bottom:14px">
-      <h3>跨境电商 <span class="cnt" id="ec-cross-n">…</span></h3>
-      <div id="ec-cross"></div>
-      <div class="pager" id="ec-cross-pager"></div>
-    </div>
-    <div class="panel" id="ec-panel-dom">
-      <h3>国内电商 <span class="cnt" id="ec-dom-n">…</span></h3>
-      <div id="ec-dom"></div>
-      <div class="pager" id="ec-dom-pager"></div>
+    <div class="panel" id="ec-panel">
+      <h3 id="ec-title">全部电商政策 <span class="cnt" id="ec-n">…</span></h3>
+      <div id="ec-list"></div>
+      <div class="pager" id="ec-pager"></div>
     </div>
   </section>
 
@@ -586,6 +581,7 @@ function cardHTML(x){
     </div>
     ${x.summary?`<div class="sum">${esc(x.summary)}</div>`:''}
     <div class="tags">
+      ${x.ec_cat?`<span class="tag ${x.ec_cat==='cross'?'tax':'warn'}">${x.ec_cat==='cross'?'跨境电商':'国内电商'}</span>`:''}
       ${stTag(x.status,x.st_src,x.st_ev)}
       ${x.risk?`<span class="tag risk-${x.risk}">关注度 ${x.risk}</span>`:''}
       ${taxes.map(t=>`<span class="tag tax">${esc(t)}</span>`).join('')}
@@ -1001,50 +997,38 @@ function renderOfficial(d){
      <div class="fulltext">${esc(x.content||'')}</div></div>`).join('');
 }
 
-/* ---------- 电商政策（多条件筛选 + 板块 + 两板块独立分页） ---------- */
-const EC={cat:'',cpage:1,dpage:1,kw:''};
-// reset 传 false 表示只翻页、不重置页码；其余（含旧的 ecSearch(1) 调用）都回到第 1 页
+/* ---------- 电商政策（多条件筛选 + 板块 + 单列表分页） ---------- */
+const EC={cat:'',page:1,kw:''};
+// reset 传 false 表示只翻页、不重置页码；其余调用都回到第 1 页
 async function ecSearch(reset){
-  if(reset!==false){EC.cpage=1;EC.dpage=1;}
+  if(reset!==false){EC.page=1;}
   const kw=$('#ec-q').value.trim(); EC.kw=kw;
   const size=parseInt($('#ec-size').value,10)||10;
   const p=new URLSearchParams({q:kw,tax:$('#ec-tax').value,domain:$('#ec-domain').value,
     level:$('#ec-level').value,status:$('#ec-status').value,aging:$('#ec-aging').value,year:$('#ec-year').value,
     risk:$('#ec-risk').value,sort:$('#ec-sort').value,
-    cat:EC.cat,size:size,cpage:EC.cpage,dpage:EC.dpage});
-  // 按板块决定显示哪些面板
-  $('#ec-panel-cross').style.display = EC.cat==='domestic' ? 'none' : '';
-  $('#ec-panel-dom').style.display   = EC.cat==='cross'    ? 'none' : '';
-  if(EC.cat!=='domestic') $('#ec-cross').innerHTML='<div class="loading">检索中…</div>';
-  if(EC.cat!=='cross')    $('#ec-dom').innerHTML='<div class="loading">检索中…</div>';
+    cat:EC.cat,size:size,page:EC.page});
+  $('#ec-list').innerHTML='<div class="loading">检索中…</div>';
+  $('#ec-pager').innerHTML='';
   try{
     const r=await safeJSON('/api/ecommerce?'+p);
-    EC.size=r.size||size; EC.cpage=r.cross.page||EC.cpage; EC.dpage=r.domestic.page||EC.dpage;
-    const catName={'':'','cross':'跨境电商','domestic':'国内电商'}[EC.cat];
+    EC.page=r.page||EC.page; EC.size=r.size||size;
+    const titles={'':'全部电商政策','cross':'跨境电商','domestic':'国内电商'};
+    $('#ec-title').innerHTML=`${titles[EC.cat]} <span class="cnt" id="ec-n">${num(r.total)}</span>`;
     $('#ec-rbar').innerHTML = (EC.cat===''
-        ? `共筛选到 跨境电商 <b>${num(r.cross.total)}</b> 件 / 国内电商 <b>${num(r.domestic.total)}</b> 件`
-        : `板块「<b>${catName}</b>」共筛选到 <b>${num(EC.cat==='cross'?r.cross.total:r.domestic.total)}</b> 件`)
+        ? `共筛选到 <b>${num(r.total)}</b> 件（跨境电商 <b>${num(r.cross_total)}</b> / 国内电商 <b>${num(r.domestic_total)}</b>）`
+        : `板块「<b>${titles[EC.cat]}</b>」共筛选到 <b>${num(r.total)}</b> 件`)
       + (kw?`（关键词：${esc(kw)}）`:'') + `　<span style="color:var(--text3);font-size:12.5px">每页 ${EC.size} 条</span>`;
     const prevKW=ST.kw; ST.kw=kw;   // 用电商关键词做卡片高亮
-    $('#ec-cross-n').textContent=r.cross.total;
-    $('#ec-dom-n').textContent=r.domestic.total;
-    if(EC.cat!=='domestic'){
-      $('#ec-cross').innerHTML = r.cross.items.length
-        ? r.cross.items.map(cardHTML).join('')
-        : '<div class="empty">未找到匹配的跨境电商政策，试试调整筛选条件</div>';
-      ecPager('#ec-cross-pager',r.cross.total,EC.cpage,'ecGoCross');
-    }
-    if(EC.cat!=='cross'){
-      $('#ec-dom').innerHTML = r.domestic.items.length
-        ? r.domestic.items.map(cardHTML).join('')
-        : '<div class="empty">未找到匹配的国内电商政策，试试调整筛选条件</div>';
-      ecPager('#ec-dom-pager',r.domestic.total,EC.dpage,'ecGoDom');
-    }
+    $('#ec-list').innerHTML = r.items.length
+      ? r.items.map(cardHTML).join('')
+      : '<div class="empty">未找到匹配的电商政策，试试调整筛选条件</div>';
+    ecPager(r.total,EC.page);
     ST.kw=prevKW;
   }catch(e){
     console.error(e);
-    $('#ec-cross').innerHTML=`<div class="empty" style="color:var(--danger)">加载出错：${esc(e.message||e)}<br>请按 F12 打开控制台查看详情并刷新重试</div>`;
-    $('#ec-dom').innerHTML=''; $('#ec-cross-pager').innerHTML=''; $('#ec-dom-pager').innerHTML='';
+    $('#ec-list').innerHTML=`<div class="empty" style="color:var(--danger)">加载出错：${esc(e.message||e)}<br>请按 F12 打开控制台查看详情并刷新重试</div>`;
+    $('#ec-pager').innerHTML='';
   }
 }
 // 板块切换（chip 单选）
@@ -1052,24 +1036,23 @@ function ecCat(el){
   $$('#ec-cats .chip').forEach(c=>c.classList.remove('on'));
   el.classList.add('on'); EC.cat=el.dataset.cat||''; ecSearch(1);
 }
-// 分页器：与政策检索同款样式，首尾页 + 当前页附近页码
-function ecPager(sel,total,page,goFn){
+// 分页器
+function ecPager(total,page){
   const size=EC.size||parseInt($('#ec-size').value,10)||10;
-  const tp=Math.ceil(total/size), el=$(sel);
+  const tp=Math.ceil(total/size), el=$('#ec-pager');
   if(!el)return;
   if(tp<=1){el.innerHTML='';return}
-  let h=`<button ${page<=1?'disabled':''} onclick="${goFn}(${page-1})">上一页</button>`;
+  let h=`<button ${page<=1?'disabled':''} onclick="ecGo(${page-1})">上一页</button>`;
   const s=new Set([1,tp,page,page-1,page+1,page-2,page+2]);
   const ps=[...s].filter(i=>i>=1&&i<=tp).sort((a,b)=>a-b);
   let last=0;
   ps.forEach(i=>{if(last&&i-last>1)h+='<span style="color:var(--text3)">…</span>';
-    h+=`<button class="${i===page?'cur':''}" onclick="${goFn}(${i})">${i}</button>`;last=i});
-  h+=`<button ${page>=tp?'disabled':''} onclick="${goFn}(${page+1})">下一页</button>
+    h+=`<button class="${i===page?'cur':''}" onclick="ecGo(${i})">${i}</button>`;last=i});
+  h+=`<button ${page>=tp?'disabled':''} onclick="ecGo(${page+1})">下一页</button>
       <span style="color:var(--text3);font-size:12.5px;margin-left:6px">第 ${page} / ${tp} 页</span>`;
   el.innerHTML=h;
 }
-async function ecGoCross(p){EC.cpage=Math.max(1,p); await ecSearch(false); ecTop('#ec-panel-cross');}
-async function ecGoDom(p){EC.dpage=Math.max(1,p); await ecSearch(false); ecTop('#ec-panel-dom');}
+async function ecGo(p){EC.page=Math.max(1,p); await ecSearch(false); ecTop('#ec-panel');}
 function ecTop(sel){const el=$(sel); if(el)window.scrollTo({top:el.offsetTop-70,behavior:'smooth'});}
 function ecReset(){
   $('#ec-q').value='';['#ec-tax','#ec-domain','#ec-level','#ec-status','#ec-aging','#ec-year','#ec-risk'].forEach(i=>$(i).value='');

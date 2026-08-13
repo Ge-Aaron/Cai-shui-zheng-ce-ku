@@ -276,9 +276,13 @@ def api_search(p):
 #   - 跨境电商：含「跨境电子商务 / 跨境电商 / 跨境零售 / 综试区 / 海外仓」等跨境+电商语义
 #   - 国内电商：含「电子商务 / 网络零售 / 直播带货」等表述且不属于跨境电商
 # ---------------------------------------------------------------------------
+# 跨境电商：以「标题」为准（正文匹配会把「春雨润苗」「自贸港」等顺带提一句的政策误收）
 ECROSS_KW = ["跨境电子商务", "跨境电商", "跨境零售", "跨境贸易电子商务",
-             "跨境电子商务综合试验区", "海外仓"]
-EDOMESTIC_KW = ["电子商务", "网络零售", "网上零售", "网络直播营销", "直播带货"]
+             "跨境电子商务综合试验区"]
+# 国内电商：标题含电商 / 互联网平台关键词，或正文含「直播」专属短语（已逐一验证零噪声）；
+# 标题里的宽词「电子商务」足以排掉无关政策，正文只保留无歧义的直播短语，避免正文宽词引入噪声。
+EDOM_TITLE_KW = ["电子商务", "网络零售", "网上零售", "网络直播营销", "直播带货", "互联网平台"]
+EDOM_BODY_KW = ["直播带货", "网络直播营销"]
 
 _EC_SELECT = ("p.id,p.title,p.doc_num,p.cwrq,p.pub_name,p.effect_level,p.aging,"
               "p.url,p.doc_year,p.clicknum,"
@@ -287,12 +291,12 @@ _EC_SELECT = ("p.id,p.title,p.doc_num,p.cwrq,p.pub_name,p.effect_level,p.aging,"
               "a.status_final,a.status_source,a.status_evidence")
 
 
-def _ec_kw_where(kws):
-    """生成 (标题 LIKE ? OR 正文 LIKE ?) 的 OR 组合 WHERE 片段与参数。"""
+def _ec_kw_where(kws, field):
+    """生成 (field LIKE ? OR field LIKE ? ...) 的 OR 组合 WHERE 片段与参数。"""
     parts, args = [], []
     for k in kws:
-        parts.append("(p.title LIKE ? OR p.content LIKE ?)")
-        args += [f"%{k}%", f"%{k}%"]
+        parts.append(f"{field} LIKE ?")
+        args += [f"%{k}%"]
     return "(" + " OR ".join(parts) + ")", args
 
 
@@ -319,11 +323,12 @@ def api_ecommerce(p):
 
     筛选参数与 api_search 对齐：q / tax / level / aging / status / year / domain /
     risk / sort，另有电商专属参数：
-      - cat   板块：''=跨境+国内都看，'cross'=只看跨境电商，'domestic'=只看国内电商
-      - size  每页条数（两个板块共用，默认 10）
-      - cpage 跨境电商当前页；dpage 国内电商当前页（两个板块各自独立翻页）
-    返回 cross / domestic 两类，各自带 total / items / page；两类计数始终返回
-    （便于界面显示板块总量），但被 cat 隐藏的板块不再取明细数据，省一次查询。
+      - cat   板块：''=全部电商政策合并展示，'cross'=只看跨境电商，'domestic'=只看国内电商
+      - size  每页条数（默认 10）
+      - page  当前页；同时兼容旧参数 cpage / dpage
+    返回统一结构：{cat, size, page, total, items, cross_total, domestic_total}
+      - cat='' 时 items 为合并后的全部电商政策，每条带 ec_cat='cross'/'domestic' 标签
+      - cat='cross'/'domestic' 时只返回对应分类数据
     """
     q = (p.get("q", [""])[0] or "").strip()
     tax = p.get("tax", [""])[0]
@@ -338,13 +343,22 @@ def api_ecommerce(p):
     if cat not in ("", "cross", "domestic"):
         cat = ""
     size = min(100, max(5, int(p.get("size", ["10"])[0] or 10)))
-    # 兼容旧参数 page：未显式给 cpage/dpage 时，用 page 作为两者初值
+    # 兼容旧参数 cpage/dpage；统一使用 page
     page = max(1, int(p.get("page", ["1"])[0] or 1))
     cpage = max(1, int(p.get("cpage", [str(page)])[0] or page))
     dpage = max(1, int(p.get("dpage", [str(page)])[0] or page))
+    if cat == "cross":
+        page = cpage
+    elif cat == "domestic":
+        page = dpage
 
-    cross_where, cross_args = _ec_kw_where(ECROSS_KW)
-    ec_where, ec_args = _ec_kw_where(EDOMESTIC_KW)
+    cross_where, cross_args = _ec_kw_where(ECROSS_KW, "p.title")
+    ec_title_where, ec_title_args = _ec_kw_where(EDOM_TITLE_KW, "p.title")
+    ec_body_where, ec_body_args = _ec_kw_where(EDOM_BODY_KW, "p.content")
+    ec_where = f"({ec_title_where} OR {ec_body_where})"
+    ec_args = ec_title_args + ec_body_args
+    domestic_where = f"({ec_where} AND NOT {cross_where})"
+    domestic_args = ec_args + cross_args
 
     # ---- 公共筛选条件（与 api_search 对齐）----
     where, args = [], []
@@ -385,6 +399,8 @@ def api_ecommerce(p):
         where.append("a.risk_level = ?")
         args.append(risk)
 
+    common_where = (" AND " + " AND ".join(where)) if where else ""
+
     # ---- 排序（与 api_search 对齐）----
     order_args = []
     if q and sort == "rel" and toks:
@@ -404,30 +420,51 @@ def api_ecommerce(p):
     c = conn()
     cur = c.cursor()
 
-    def run(cat_where, cat_args, pg, fetch=True):
-        """统计该板块命中总数；fetch=False 时只数不取（板块被隐藏的情况）。"""
-        w = list(where) + [cat_where]
-        a = list(args) + list(cat_args)
-        wsql = (" WHERE " + " AND ".join(w)) if w else ""
-        base = f"FROM policies p LEFT JOIN analysis a ON a.policy_id=p.id {wsql}"
-        total = cur.execute(f"SELECT COUNT(*) {base}", a).fetchone()[0]
-        if not fetch:
-            return total, [], pg
-        # 翻页越界（如换了筛选条件后页码超出）时回落到最后一页，避免出现空白页
-        tp = max(1, -(-total // size))
-        pg = min(pg, tp)
-        rows = cur.execute(
-            f"SELECT {_EC_SELECT} {base} ORDER BY {order} LIMIT ? OFFSET ?",
-            a + order_args + [size, (pg - 1) * size]).fetchall()
-        return total, _ec_rows_to_items(rows), pg
+    def count(cat_sql, cat_args):
+        a = list(cat_args) + list(args)
+        return cur.execute(
+            f"SELECT COUNT(*) FROM policies p LEFT JOIN analysis a ON a.policy_id=p.id "
+            f"WHERE {cat_sql}{common_where}", a).fetchone()[0]
 
-    ct, ci, cp = run(cross_where, cross_args, cpage, cat != "domestic")
-    dt, di, dp = run(f"({ec_where} AND NOT {cross_where})",
-                     ec_args + cross_args, dpage, cat != "cross")
+    # 先拿两个分类总数，用于结果条展示
+    ct = count(cross_where, cross_args)
+    dt = count(domestic_where, domestic_args)
+
+    if cat == "":
+        # 合并展示：UNION ALL 同时返回 ec_cat 标签
+        total = ct + dt
+        tp = max(1, -(-total // size))
+        page = min(page, tp)
+        union_params = (list(cross_args) + list(args) +
+                        list(domestic_args) + list(args) +
+                        order_args + [size, (page - 1) * size])
+        rows = cur.execute(
+            f"SELECT 'cross' AS ec_cat, {_EC_SELECT} FROM policies p LEFT JOIN analysis a ON a.policy_id=p.id "
+            f"WHERE {cross_where}{common_where} "
+            f"UNION ALL "
+            f"SELECT 'domestic' AS ec_cat, {_EC_SELECT} FROM policies p LEFT JOIN analysis a ON a.policy_id=p.id "
+            f"WHERE {domestic_where}{common_where} "
+            f"ORDER BY {order} LIMIT ? OFFSET ?",
+            union_params).fetchall()
+        items = _ec_rows_to_items(rows)
+        for it, r in zip(items, rows):
+            it["ec_cat"] = r["ec_cat"]
+    else:
+        cat_sql = cross_where if cat == "cross" else domestic_where
+        cat_args = cross_args if cat == "cross" else domestic_args
+        total = ct if cat == "cross" else dt
+        tp = max(1, -(-total // size))
+        page = min(page, tp)
+        a = list(cat_args) + list(args)
+        rows = cur.execute(
+            f"SELECT {_EC_SELECT} FROM policies p LEFT JOIN analysis a ON a.policy_id=p.id "
+            f"WHERE {cat_sql}{common_where} ORDER BY {order} LIMIT ? OFFSET ?",
+            a + order_args + [size, (page - 1) * size]).fetchall()
+        items = _ec_rows_to_items(rows)
+
     c.close()
-    return {"cat": cat, "size": size,
-            "cross": {"total": ct, "items": ci, "page": cp},
-            "domestic": {"total": dt, "items": di, "page": dp}}
+    return {"cat": cat, "size": size, "page": page, "total": total,
+            "cross_total": ct, "domestic_total": dt, "items": items}
 
 
 def api_policy(pid):
