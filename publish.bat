@@ -17,6 +17,17 @@ set "REPO_URL=https://github.com/Ge-Aaron/Cai-shui-zheng-ce-ku.git"
 echo   Target repository: %REPO_URL%
 echo.
 
+REM Proxy self-heal: browser reaches GitHub via a local proxy (e.g. Clash on
+REM 127.0.0.1:7897); git (libcurl) does NOT read the browser proxy, so it must
+REM be set explicitly or pushes fail with "Failed to connect github.com:443".
+REM Leave PROXY empty (set "PROXY=") only if your network has direct access.
+set "PROXY=http://127.0.0.1:7897"
+if not "%PROXY%"=="" (
+    git config --global http.proxy %PROXY% >nul 2>&1
+    git config --global https.proxy %PROXY% >nul 2>&1
+    echo   [proxy] git http/https proxy set to %PROXY%
+)
+
 if not exist ".git" (
     echo   [init] No .git found, initializing and linking remote...
     git init -b master >nul 2>&1
