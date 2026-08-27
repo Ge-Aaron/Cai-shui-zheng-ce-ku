@@ -22,6 +22,7 @@ import shutil
 import subprocess
 import urllib.request
 import urllib.error
+import argparse
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PY = sys.executable
@@ -55,9 +56,11 @@ def save_local_env(d):
             f.write(f"{k}={v}\n")
 
 
-def ensure_credentials(cfg):
+def ensure_credentials(cfg, noninteractive=False):
     changed = False
     if not cfg.get("GITHUB_TOKEN"):
+        if noninteractive:
+            raise RuntimeError("缺少 GITHUB_TOKEN（.env.local 未配置），非交互模式无法继续上传")
         print("\n[需要] GitHub 个人访问令牌（PAT），用于上传数据库到 Release：")
         print("   GitHub 网页 -> 头像 -> Settings -> Developer settings ->")
         print("   Personal access tokens -> Tokens (classic) -> Generate new token (classic)")
@@ -70,6 +73,8 @@ def ensure_credentials(cfg):
                 break
             print("   不能为空，请重新输入")
     if not cfg.get("RENDER_DEPLOY_HOOK"):
+        if noninteractive:
+            raise RuntimeError("缺少 RENDER_DEPLOY_HOOK（.env.local 未配置），非交互模式无法继续部署")
         print("\n[需要] Render Deploy Hook（用于触发云端重新部署）：")
         print("   Render 控制台 -> 你的 taxdb 服务 -> Settings -> Deploy Hook -> Generate Deploy Hook")
         print("   复制那个 https://api.render.com/deploy/... 链接")
@@ -176,19 +181,34 @@ def regenerate(kind):
     return 0
 
 
+def parse_args():
+    p = argparse.ArgumentParser(description="taxdb 一键更新发布")
+    p.add_argument("--upload-only", action="store_true",
+                  help="非交互：跳过生成，直接上传当前数据库并触发 Render 部署（供自动化调用）")
+    p.add_argument("--mode", choices=["1", "2", "3"], default=None,
+                  help="非交互模式：1=增量更新 2=全量重建 3=跳过生成（等同 --upload-only）")
+    return p.parse_args()
+
+
 def main():
     print("=" * 54)
     print("  taxdb 一键更新发布：重新生成 -> 上传 Release -> 触发部署")
     print("=" * 54)
-    cfg = ensure_credentials(load_local_env())
+    args = parse_args()
+    noninteractive = args.upload_only or args.mode is not None
+    cfg = ensure_credentials(load_local_env(), noninteractive=noninteractive)
     if os.path.getsize(DB_PATH) < 1024 * 1024:
         raise RuntimeError("data/tax_policy.db 异常（过小），请确认数据库存在")
     print(f"\n数据库：{os.path.getsize(DB_PATH) // 1024 // 1024} MB")
-    print("选择「重新生成」方式：")
-    print("  1) 增量更新（推荐：抓取最新政策 + 重建向量）")
-    print("  2) 全量重建向量（改了 analyzer/embeddings 逻辑时用）")
-    print("  3) 跳过生成（已手动改好数据库，直接上传）")
-    kind = input("输入 1/2/3（默认 1）：").strip() or "1"
+    if noninteractive:
+        kind = "3" if args.upload_only else args.mode
+        log(f"非交互模式：生成方式={kind}（{'跳过生成，直接上传' if kind == '3' else '先生成再上传'}）")
+    else:
+        print("选择「重新生成」方式：")
+        print("  1) 增量更新（推荐：抓取最新政策 + 重建向量）")
+        print("  2) 全量重建向量（改了 analyzer/embeddings 逻辑时用）")
+        print("  3) 跳过生成（已手动改好数据库，直接上传）")
+        kind = input("输入 1/2/3（默认 1）：").strip() or "1"
     rc = regenerate(kind)
     if rc != 0:
         raise RuntimeError(f"生成步骤返回非零退出码 {rc}，已停止发布（云端未改动）")
